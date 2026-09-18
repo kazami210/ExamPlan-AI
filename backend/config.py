@@ -23,7 +23,14 @@ UPLOAD_DIR = DATA_DIR / "uploads"
 DATA_DIR.mkdir(exist_ok=True)
 UPLOAD_DIR.mkdir(exist_ok=True)
 
-DATABASE_URL = f"sqlite:///{DATA_DIR / 'exam_plan.db'}"
+raw_db_url = os.getenv("DATABASE_URL", "").strip()
+if raw_db_url:
+    # SQLAlchemy requires postgresql:// instead of legacy postgres://
+    if raw_db_url.startswith("postgres://"):
+        raw_db_url = raw_db_url.replace("postgres://", "postgresql://", 1)
+    DATABASE_URL = raw_db_url
+else:
+    DATABASE_URL = f"sqlite:///{DATA_DIR / 'exam_plan.db'}"
 
 def get_google_client_id() -> str:
     load_env()
