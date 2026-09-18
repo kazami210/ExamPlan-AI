@@ -1,4 +1,4 @@
-﻿from datetime import datetime, date
+from datetime import datetime, date
 from typing import Optional, List, Dict
 from pathlib import Path
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
@@ -567,6 +567,10 @@ def list_plans(db: Session = Depends(get_db)):
         for p in plans
     ]
 
+class StudyLessonRequest(BaseModel):
+    target_goal: Optional[str] = "advanced" # "basic" | "advanced"
+    gemini_api_key: Optional[str] = None
+
 @router.patch("/tasks/{task_id}/toggle")
 def toggle_task(task_id: int, db: Session = Depends(get_db)):
     task = db.query(StudyTask).filter(StudyTask.id == task_id).first()
@@ -578,6 +582,53 @@ def toggle_task(task_id: int, db: Session = Depends(get_db)):
     db.commit()
 
     return {"success": True, "task_id": task.id, "is_completed": task.is_completed}
+
+@router.post("/tasks/{task_id}/study-lesson")
+async def get_study_lesson(
+    task_id: int,
+    req: StudyLessonRequest = StudyLessonRequest(),
+    db: Session = Depends(get_db)
+):
+    """Retrieve micro-learning lesson with 3-5 core concepts, 2-min quiz, and advanced materials using RAG."""
+    task = db.query(StudyTask).filter(StudyTask.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Không tìm thấy nhiệm vụ học tập.")
+
+    plan = db.query(StudyPlan).filter(StudyPlan.id == task.plan_id).first()
+    doc = db.query(Document).filter(Document.id == plan.document_id).first() if plan else None
+
+    # Retrieve relevant semantic chunks using RAG from the syllabus/document
+    relevant_chunks = []
+    if doc and doc.extracted_text:
+        chunks = chunk_text(doc.extracted_text, chunk_size=700, overlap=100)
+        search_query = f"{task.title} {task.topic_title or ''} {task.description or ''}".strip()
+        relevant_chunks = search_relevant_chunks(search_query, chunks, top_k=4)
+
+    lesson_data = await ai_service.generate_study_lesson(
+        task_title=task.title,
+        topic_title=task.topic_title or "",
+        context_chunks=relevant_chunks,
+        target_goal=req.target_goal or "advanced",
+        api_key=req.gemini_api_key
+    )
+
+    return {
+        "success": True,
+        "task": {
+            "id": task.id,
+            "title": task.title,
+            "topic_title": task.topic_title,
+            "description": task.description,
+            "task_type": task.task_type,
+            "difficulty": task.difficulty,
+            "estimated_minutes": task.estimated_minutes,
+            "is_completed": task.is_completed,
+            "study_date": task.study_date.isoformat(),
+            "day_number": task.day_number,
+        },
+        "target_goal": req.target_goal or "advanced",
+        "lesson": lesson_data
+    }
 
 @router.post("/plans/{plan_id}/reschedule")
 def reschedule_plan(plan_id: int, db: Session = Depends(get_db)):

@@ -1,4 +1,4 @@
-﻿from datetime import date, timedelta
+from datetime import date, timedelta
 from fastapi.testclient import TestClient
 from backend.main import app
 from backend.database import init_db
@@ -86,11 +86,34 @@ def test_export_ical():
     assert "BEGIN:VEVENT" in res.text
     print("✓ Test iCal export passed: Valid .ics calendar generated!")
 
+def test_study_lesson():
+    plan_id, task_id = test_generate_study_plan()
+    
+    # Test with Advanced target
+    res_adv = client.post(f"/api/tasks/{task_id}/study-lesson", json={"target_goal": "advanced"})
+    assert res_adv.status_code == 200
+    data_adv = res_adv.json()
+    assert data_adv["success"] is True
+    assert len(data_adv["lesson"]["core_concepts"]) >= 3
+    assert "question" in data_adv["lesson"]["quick_quiz"]
+    assert len(data_adv["lesson"]["quick_quiz"]["options"]) == 4
+    assert len(data_adv["lesson"]["advanced_materials"]) >= 1
+    print("✓ Test study lesson (Advanced) passed: Core concepts & Quick quiz & Advanced materials generated!")
+
+    # Test with Basic target
+    res_basic = client.post(f"/api/tasks/{task_id}/study-lesson", json={"target_goal": "basic"})
+    assert res_basic.status_code == 200
+    data_basic = res_basic.json()
+    assert data_basic["success"] is True
+    assert len(data_basic["lesson"]["core_concepts"]) >= 3
+    print("✓ Test study lesson (Basic) passed!")
+
 if __name__ == "__main__":
     test_load_sample_and_analyze()
     test_generate_study_plan()
     test_toggle_task()
     test_reschedule()
+    test_study_lesson()
     test_chat_rag()
     test_export_ical()
     print("\n🎉 ALL UNIT & INTEGRATION TESTS PASSED SUCCESSFULLY!")

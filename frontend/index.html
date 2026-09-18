@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
@@ -432,8 +432,8 @@
         </div>
       </div>
 
-      <!-- Roadmap View Tabs: Daily List vs Calendar vs Kanban -->
-      <div class="flex items-center justify-between">
+      <!-- Roadmap View Tabs & Target Goal Filter -->
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div class="inline-flex p-1 bg-slate-200/70 rounded-xl text-xs font-bold text-slate-600">
           <button id="view-todo-btn" class="px-4 py-2 rounded-lg bg-white text-indigo-600 shadow-sm flex items-center gap-1.5">
             <i data-lucide="check-square" class="w-4 h-4"></i> Lịch Trình Từng Ngày (To-Do)
@@ -444,6 +444,21 @@
           <button id="view-kanban-btn" class="px-4 py-2 rounded-lg hover:text-slate-900 flex items-center gap-1.5">
             <i data-lucide="columns-3" class="w-4 h-4"></i> Bảng Tiến Độ (Kanban)
           </button>
+        </div>
+
+        <!-- Target Goal Filter Selector -->
+        <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm">
+          <span class="text-xs font-bold text-slate-600 flex items-center gap-1">
+            <i data-lucide="target" class="w-3.5 h-3.5 text-indigo-600"></i> Mục tiêu:
+          </span>
+          <div class="inline-flex p-0.5 bg-slate-100 rounded-lg text-xs font-bold text-slate-600">
+            <button type="button" id="goal-filter-basic" class="px-2.5 py-1 rounded-md text-[11px] font-semibold transition text-slate-600 hover:text-slate-900 cursor-pointer">
+              Cơ bản / Pass môn
+            </button>
+            <button type="button" id="goal-filter-advanced" class="px-2.5 py-1 rounded-md text-[11px] font-bold transition bg-indigo-600 text-white shadow-xs cursor-pointer flex items-center gap-1">
+              <i data-lucide="award" class="w-3 h-3"></i> Nâng cao / Điểm giỏi
+            </button>
+          </div>
         </div>
       </div>
 
@@ -689,7 +704,119 @@
     </div>
   </div>
 
+  <!-- Study Lesson Modal (Micro-learning & Quick Quiz RAG) -->
+  <div id="study-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-white rounded-3xl max-w-2xl w-full p-5 sm:p-7 shadow-2xl border border-slate-100 max-h-[90vh] flex flex-col transition-all">
+      <!-- Modal Header -->
+      <div class="flex items-start justify-between pb-4 border-b border-slate-100 shrink-0">
+        <div class="flex items-start gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+            <i data-lucide="sparkles" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span id="study-modal-badge-type" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">HỌC MỚI</span>
+              <span id="study-modal-badge-diff" class="px-2 py-0.5 rounded-full text-[10px] font-bold badge-diff-trung-binh">Trung bình</span>
+              <span id="study-modal-time" class="text-[11px] text-slate-400 font-medium flex items-center gap-1">
+                <i data-lucide="clock" class="w-3 h-3"></i> 60p
+              </span>
+            </div>
+            <h3 id="study-modal-title" class="text-base sm:text-lg font-extrabold text-slate-900 leading-snug">Chi Tiết Bài Học</h3>
+            <p id="study-modal-topic" class="text-xs text-slate-500 mt-0.5">Chủ đề: Đang tải...</p>
+          </div>
+        </div>
+        <button type="button" id="btn-close-study-modal" class="p-2 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 cursor-pointer transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Modal Content Body (Scrollable) -->
+      <div id="study-modal-content" class="flex-1 overflow-y-auto py-4 space-y-5 pr-1 text-slate-800">
+        <!-- Loading State -->
+        <div id="study-modal-loading" class="py-12 text-center space-y-3">
+          <div class="inline-block animate-spin text-3xl">✨</div>
+          <p class="text-sm font-bold text-slate-700">Gemini RAG đang trích xuất kiến thức cốt lõi...</p>
+          <p class="text-xs text-slate-400">Đang tổng hợp 3-5 điểm mấu chốt và tạo Quick-Quiz 2 phút</p>
+        </div>
+
+        <!-- Loaded Content Wrapper -->
+        <div id="study-modal-body" class="hidden space-y-6">
+          <!-- 3-5 Core Concepts -->
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="text-xs font-black uppercase tracking-wider text-indigo-800 flex items-center gap-2">
+                <i data-lucide="check-circle-2" class="w-4 h-4 text-indigo-600"></i> Kiến Thức Cốt Lõi Cần Nhớ (Core Concepts)
+              </h4>
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">
+                AI Tóm Tắt Từ Đề Cương
+              </span>
+            </div>
+            <div id="study-modal-concepts-list" class="space-y-3">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+          <!-- Quick Quiz 2-Minute -->
+          <div class="bg-gradient-to-br from-indigo-50/70 via-slate-50 to-purple-50/40 p-4 sm:p-5 rounded-2xl border border-indigo-100/80 shadow-sm space-y-3.5">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="w-7 h-7 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-xs font-black shadow-xs">
+                  ⚡
+                </span>
+                <div>
+                  <h4 class="text-xs font-extrabold text-slate-900">Quick-Quiz 2 Phút Tự Kiểm Tra</h4>
+                  <p class="text-[11px] text-slate-500">Thử thách ngay để củng cố trí nhớ dài hạn (Spaced Retrieval)</p>
+                </div>
+              </div>
+              <span class="text-[10px] font-bold text-amber-700 bg-amber-100/80 px-2 py-0.5 rounded-full border border-amber-200">
+                2 Phút
+              </span>
+            </div>
+
+            <p id="study-quiz-question" class="text-xs sm:text-sm font-bold text-slate-800 leading-relaxed pt-1">
+              Đang tải câu hỏi...
+            </p>
+
+            <div id="study-quiz-options" class="space-y-2">
+              <!-- Rendered options with radio/buttons -->
+            </div>
+
+            <div id="study-quiz-feedback" class="hidden p-3 rounded-xl text-xs font-semibold">
+              <!-- Feedback after choosing answer -->
+            </div>
+          </div>
+
+          <!-- Target Goal: Advanced Materials & High-Score Exercises (Visible when Advanced target) -->
+          <div id="study-modal-advanced-section" class="hidden space-y-3">
+            <div class="flex items-center justify-between">
+              <h4 class="text-xs font-black uppercase tracking-wider text-purple-800 flex items-center gap-2">
+                <i data-lucide="award" class="w-4 h-4 text-purple-600"></i> Tài Liệu & Bài Tập Nâng Cao (Mục Tiêu Điểm Giỏi)
+              </h4>
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 font-extrabold border border-purple-200">
+                Bứt Phá 9-10đ
+              </span>
+            </div>
+            <div id="study-modal-advanced-list" class="space-y-2.5">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer Action -->
+      <div class="pt-4 border-t border-slate-100 flex items-center justify-between shrink-0 gap-3">
+        <button type="button" id="btn-study-modal-toggle-done" class="px-4 py-2.5 rounded-xl font-bold text-xs transition flex items-center gap-2 cursor-pointer">
+          <i data-lucide="check" class="w-4 h-4"></i>
+          <span>Đánh dấu đã học xong</span>
+        </button>
+        <button type="button" id="btn-study-modal-close-footer" class="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs transition cursor-pointer">
+          Đóng cửa sổ
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Main JavaScript App -->
-  <script src="/static/app.js?v=20260918_gis"></script>
+  <script src="/static/app.js?v=20260918_study_modal"></script>
 </body>
 </html>

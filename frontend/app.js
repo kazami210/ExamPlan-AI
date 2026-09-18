@@ -14,10 +14,36 @@ const state = {
   currentDocTopics: [],
   googleClientId: "",
   currentUser: null,
-  authToken: localStorage.getItem("examplan_auth_token") || ""
+  authToken: localStorage.getItem("examplan_auth_token") || "",
+  targetGoal: "advanced", // "basic" (Pass môn) | "advanced" (Điểm giỏi)
+  activeStudyTask: null,
+  studyLessonCache: {} // taskId_goal -> lessonData
 };
 
 // --- DOM Elements ---
+// Target Goal Filter DOM elements
+const goalFilterBasic = document.getElementById("goal-filter-basic");
+const goalFilterAdvanced = document.getElementById("goal-filter-advanced");
+
+// Study Modal DOM elements
+const studyModal = document.getElementById("study-modal");
+const btnCloseStudyModal = document.getElementById("btn-close-study-modal");
+const btnStudyModalCloseFooter = document.getElementById("btn-study-modal-close-footer");
+const btnStudyModalToggleDone = document.getElementById("btn-study-modal-toggle-done");
+const studyModalBadgeType = document.getElementById("study-modal-badge-type");
+const studyModalBadgeDiff = document.getElementById("study-modal-badge-diff");
+const studyModalTime = document.getElementById("study-modal-time");
+const studyModalTitle = document.getElementById("study-modal-title");
+const studyModalTopic = document.getElementById("study-modal-topic");
+const studyModalLoading = document.getElementById("study-modal-loading");
+const studyModalBody = document.getElementById("study-modal-body");
+const studyModalConceptsList = document.getElementById("study-modal-concepts-list");
+const studyQuizQuestion = document.getElementById("study-quiz-question");
+const studyQuizOptions = document.getElementById("study-quiz-options");
+const studyQuizFeedback = document.getElementById("study-quiz-feedback");
+const studyModalAdvancedSection = document.getElementById("study-modal-advanced-section");
+const studyModalAdvancedList = document.getElementById("study-modal-advanced-list");
+
 // Auth & User DOM elements
 const btnOpenLogin = document.getElementById("btn-open-login");
 const userProfileWidget = document.getElementById("user-profile-widget");
@@ -194,6 +220,37 @@ document.addEventListener("DOMContentLoaded", () => {
   if (btnCloseLibrary) {
     btnCloseLibrary.addEventListener("click", () => {
       if (libraryModal) libraryModal.classList.add("hidden");
+    });
+  }
+
+  // --- Target Goal Filter Listeners ---
+  if (goalFilterBasic) {
+    goalFilterBasic.addEventListener("click", () => setTargetGoal("basic"));
+  }
+  if (goalFilterAdvanced) {
+    goalFilterAdvanced.addEventListener("click", () => setTargetGoal("advanced"));
+  }
+
+  // --- Study Lesson Modal Listeners ---
+  if (btnCloseStudyModal) {
+    btnCloseStudyModal.addEventListener("click", closeStudyModal);
+  }
+  if (btnStudyModalCloseFooter) {
+    btnStudyModalCloseFooter.addEventListener("click", closeStudyModal);
+  }
+  if (btnStudyModalToggleDone) {
+    btnStudyModalToggleDone.addEventListener("click", () => {
+      if (state.activeStudyTask) {
+        handleToggleTask(state.activeStudyTask.id);
+        // Toggle visual state inside modal
+        state.activeStudyTask.is_completed = !state.activeStudyTask.is_completed;
+        updateStudyModalDoneButton(state.activeStudyTask.is_completed);
+      }
+    });
+  }
+  if (studyModal) {
+    studyModal.addEventListener("click", (e) => {
+      if (e.target === studyModal) closeStudyModal();
     });
   }
 
@@ -1403,19 +1460,26 @@ function renderTaskItem(task) {
   if (task.difficulty === "Khó") diffClass = "badge-diff-kho";
 
   return `
-    <div class="flex items-start gap-3 p-3 rounded-xl border border-slate-100 hover:border-slate-300 hover:bg-slate-50/50 transition group">
-      <input type="checkbox" id="task-${task.id}" class="task-checkbox mt-1 w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 cursor-pointer" ${task.is_completed ? "checked" : ""} onchange="handleToggleTask(${task.id})">
-      <label for="task-${task.id}" class="flex-1 cursor-pointer select-none">
-        <div class="flex flex-wrap items-center gap-2 mb-1">
-          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${typeBadge}">${typeLabel}</span>
-          <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold ${diffClass}">${task.difficulty}</span>
-          <span class="text-slate-400 text-[11px] font-medium flex items-center gap-1">
-            <i data-lucide="clock" class="w-3 h-3"></i> ${task.estimated_minutes}p
+    <div class="flex items-start gap-3 p-3 rounded-xl border border-slate-100 hover:border-indigo-300 hover:bg-slate-50/70 transition group cursor-pointer" onclick="handleTaskItemClick(event, ${task.id})">
+      <div class="pt-0.5" onclick="event.stopPropagation()">
+        <input type="checkbox" id="task-${task.id}" class="task-checkbox w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 cursor-pointer" ${task.is_completed ? "checked" : ""} onchange="handleToggleTask(${task.id})">
+      </div>
+      <div class="flex-1 select-none">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-1">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${typeBadge}">${typeLabel}</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold ${diffClass}">${task.difficulty}</span>
+            <span class="text-slate-400 text-[11px] font-medium flex items-center gap-1">
+              <i data-lucide="clock" class="w-3 h-3"></i> ${task.estimated_minutes}p
+            </span>
+          </div>
+          <span class="opacity-0 group-hover:opacity-100 transition-opacity text-[11px] font-bold text-indigo-600 flex items-center gap-1">
+            <i data-lucide="sparkles" class="w-3 h-3"></i> Xem chi tiết & Quiz
           </span>
         </div>
-        <h4 class="task-title text-xs font-bold text-slate-800">${task.title}</h4>
-        ${task.description ? `<p class="text-[11px] text-slate-500 mt-0.5 leading-relaxed">${task.description}</p>` : ""}
-      </label>
+        <h4 class="task-title text-xs font-bold text-slate-800 ${task.is_completed ? "line-through text-slate-400" : "group-hover:text-indigo-600"} transition-colors">${task.title}</h4>
+        ${task.description ? `<p class="text-[11px] text-slate-500 mt-0.5 leading-relaxed line-clamp-2">${task.description}</p>` : ""}
+      </div>
     </div>
   `;
 }
@@ -1452,7 +1516,7 @@ function renderCalendarView(tasks) {
           </div>
           <div class="space-y-1">
             ${dayTasks.slice(0, 2).map((t) => `
-              <div class="text-[10px] truncate p-1 rounded ${t.is_completed ? "line-through text-slate-400 bg-slate-100" : "text-slate-700 bg-slate-50 border border-slate-100"}" title="${t.title}">
+              <div onclick="openStudyModal(${t.id})" class="text-[10px] truncate p-1 rounded cursor-pointer hover:border-indigo-300 hover:text-indigo-700 transition ${t.is_completed ? "line-through text-slate-400 bg-slate-100" : "text-slate-700 bg-slate-50 border border-slate-100"}" title="${t.title} - Bấm để học chi tiết">
                 ${t.title}
               </div>
             `).join("")}
@@ -1483,15 +1547,15 @@ function renderKanbanView(tasks) {
 
 function renderKanbanCard(t) {
   return `
-    <div class="p-3 bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow transition">
+    <div class="p-3 bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow hover:border-indigo-300 transition cursor-pointer" onclick="handleTaskItemClick(event, ${t.id})">
       <div class="flex items-center justify-between text-[10px] font-bold text-slate-500 mb-1">
         <span>Ngày ${t.day_number} (${t.study_date})</span>
         <span class="text-indigo-600">${t.estimated_minutes}p</span>
       </div>
-      <h5 class="text-xs font-bold text-slate-800 ${t.is_completed ? "line-through text-slate-400" : ""}">${t.title}</h5>
-      <div class="mt-2.5 flex items-center justify-between pt-2 border-t border-slate-100">
+      <h5 class="text-xs font-bold text-slate-800 hover:text-indigo-600 transition-colors ${t.is_completed ? "line-through text-slate-400" : ""}">${t.title}</h5>
+      <div class="mt-2.5 flex items-center justify-between pt-2 border-t border-slate-100" onclick="event.stopPropagation()">
         <span class="text-[10px] px-2 py-0.5 rounded-full ${t.difficulty === "Khó" ? "badge-diff-kho" : "badge-diff-de"}">${t.difficulty}</span>
-        <button onclick="handleToggleTask(${t.id})" class="text-[11px] font-bold ${t.is_completed ? "text-slate-400" : "text-emerald-600 hover:text-emerald-700"}">
+        <button onclick="handleToggleTask(${t.id})" class="text-[11px] font-bold ${t.is_completed ? "text-slate-400" : "text-emerald-600 hover:text-emerald-700"} cursor-pointer">
           ${t.is_completed ? "Đã xong" : "Tick hoàn thành"}
         </button>
       </div>
@@ -1524,6 +1588,240 @@ function switchView(viewName) {
 }
 
 // --- Toggle Task Checkbox ---
+window.handleTaskItemClick = function(event, taskId) {
+  // Prevent opening modal when checking checkbox directly
+  if (event.target && (event.target.tagName === "INPUT" || event.target.closest("input"))) {
+    return;
+  }
+  openStudyModal(taskId);
+};
+
+window.setTargetGoal = function(goal) {
+  state.targetGoal = goal;
+  if (goal === "basic") {
+    goalFilterBasic.className = "px-2.5 py-1 rounded-md text-[11px] font-bold transition bg-indigo-600 text-white shadow-xs cursor-pointer";
+    goalFilterAdvanced.className = "px-2.5 py-1 rounded-md text-[11px] font-semibold transition text-slate-600 hover:text-slate-900 cursor-pointer flex items-center gap-1";
+  } else {
+    goalFilterAdvanced.className = "px-2.5 py-1 rounded-md text-[11px] font-bold transition bg-indigo-600 text-white shadow-xs cursor-pointer flex items-center gap-1";
+    goalFilterBasic.className = "px-2.5 py-1 rounded-md text-[11px] font-semibold transition text-slate-600 hover:text-slate-900 cursor-pointer";
+  }
+
+  // If Study Modal is currently open, refresh the lesson view for the new goal
+  if (studyModal && !studyModal.classList.contains("hidden") && state.activeStudyTask) {
+    openStudyModal(state.activeStudyTask.id, true);
+  }
+};
+
+window.openStudyModal = async function(taskId, forceRefresh = false) {
+  if (!studyModal) return;
+
+  // Find task data from state
+  const task = state.currentPlanData?.tasks?.find((t) => t.id === taskId);
+  if (!task) return;
+
+  state.activeStudyTask = task;
+  studyModal.classList.remove("hidden");
+
+  // Populate Task Header
+  studyModalTitle.textContent = task.title;
+  studyModalTopic.textContent = task.topic_title ? `Chủ đề: ${task.topic_title}` : `Ngày ${task.day_number} (${task.study_date})`;
+  studyModalTime.innerHTML = `<i data-lucide="clock" class="w-3 h-3"></i> ${task.estimated_minutes} phút`;
+
+  // Badges
+  let typeLabel = "HỌC MỚI";
+  let typeClass = "bg-indigo-50 text-indigo-700 border-indigo-200";
+  if (task.task_type === "spaced_review") {
+    typeLabel = "ÔN LẶP LẠI";
+    typeClass = "bg-purple-50 text-purple-700 border-purple-200";
+  } else if (task.task_type === "practice_exam") {
+    typeLabel = "THI THỬ MOCK";
+    typeClass = "bg-amber-50 text-amber-700 border-amber-200";
+  } else if (task.task_type === "final_review") {
+    typeLabel = "TỔNG ÔN";
+    typeClass = "bg-rose-50 text-rose-700 border-rose-200";
+  }
+  studyModalBadgeType.textContent = typeLabel;
+  studyModalBadgeType.className = `px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${typeClass}`;
+
+  let diffClass = "badge-diff-trung-binh";
+  if (task.difficulty === "Dễ") diffClass = "badge-diff-de";
+  if (task.difficulty === "Khó") diffClass = "badge-diff-kho";
+  studyModalBadgeDiff.textContent = task.difficulty;
+  studyModalBadgeDiff.className = `px-2 py-0.5 rounded-full text-[10px] font-bold ${diffClass}`;
+
+  updateStudyModalDoneButton(task.is_completed);
+
+  // Check in-memory cache for this task + targetGoal
+  const cacheKey = `${taskId}_${state.targetGoal}`;
+  if (!forceRefresh && state.studyLessonCache[cacheKey]) {
+    studyModalLoading.classList.add("hidden");
+    studyModalBody.classList.remove("hidden");
+    renderStudyLessonContent(state.studyLessonCache[cacheKey]);
+    lucide.createIcons();
+    return;
+  }
+
+  // Show Loading & Fetch from RAG Endpoint
+  studyModalLoading.classList.remove("hidden");
+  studyModalBody.classList.add("hidden");
+  lucide.createIcons();
+
+  try {
+    const res = await fetch(`/api/tasks/${taskId}/study-lesson`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+      body: JSON.stringify({
+        target_goal: state.targetGoal || "advanced",
+        gemini_api_key: state.geminiApiKey || null
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || "Không thể tải kiến thức bài học.");
+    }
+
+    const data = await res.json();
+    state.studyLessonCache[cacheKey] = data.lesson;
+
+    studyModalLoading.classList.add("hidden");
+    studyModalBody.classList.remove("hidden");
+    renderStudyLessonContent(data.lesson);
+  } catch (err) {
+    studyModalLoading.innerHTML = `
+      <div class="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-rose-700 text-xs">
+        <p class="font-bold">Lỗi tải kiến thức bài học: ${err.message}</p>
+        <button onclick="openStudyModal(${taskId}, true)" class="mt-2 px-3 py-1 bg-rose-600 text-white rounded-lg font-bold">Thử lại</button>
+      </div>
+    `;
+  }
+  lucide.createIcons();
+};
+
+function updateStudyModalDoneButton(isCompleted) {
+  if (!btnStudyModalToggleDone) return;
+  if (isCompleted) {
+    btnStudyModalToggleDone.className = "px-4 py-2.5 rounded-xl font-bold text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-800 transition flex items-center gap-2 cursor-pointer border border-emerald-300";
+    btnStudyModalToggleDone.innerHTML = `<i data-lucide="check-check" class="w-4 h-4 text-emerald-600"></i> <span>✓ Đã Hoàn Thành (Bấm để hủy)</span>`;
+  } else {
+    btnStudyModalToggleDone.className = "px-4 py-2.5 rounded-xl font-bold text-xs bg-indigo-600 hover:bg-indigo-700 text-white transition flex items-center gap-2 cursor-pointer shadow-md hover:shadow-indigo-200";
+    btnStudyModalToggleDone.innerHTML = `<i data-lucide="check" class="w-4 h-4"></i> <span>Đánh dấu đã học xong</span>`;
+  }
+  lucide.createIcons();
+}
+
+function renderStudyLessonContent(lesson) {
+  if (!lesson) return;
+
+  // 1. Render 3 - 5 Core Concepts
+  const concepts = lesson.core_concepts || [];
+  studyModalConceptsList.innerHTML = concepts.map((c, idx) => `
+    <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-indigo-200 hover:bg-indigo-50/20 transition space-y-1.5">
+      <div class="flex items-center gap-2">
+        <span class="w-5 h-5 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+          ${idx + 1}
+        </span>
+        <h5 class="text-xs font-bold text-slate-900">${escapeHtml(c.title || `Khái niệm ${idx + 1}`)}</h5>
+      </div>
+      <p class="text-xs text-slate-600 leading-relaxed pl-7">${escapeHtml(c.summary || "")}</p>
+      ${c.tip ? `
+        <div class="ml-7 p-2 rounded-xl bg-amber-50/80 border border-amber-200/60 text-[11px] text-amber-900 flex items-start gap-1.5">
+          <span class="shrink-0 text-amber-600 font-bold">💡 Mẹo thi:</span>
+          <span>${escapeHtml(c.tip)}</span>
+        </div>
+      ` : ""}
+    </div>
+  `).join("");
+
+  // 2. Render Quick Quiz
+  const quiz = lesson.quick_quiz;
+  if (quiz && quiz.question) {
+    studyQuizQuestion.textContent = quiz.question;
+    studyQuizFeedback.classList.add("hidden");
+    studyQuizFeedback.innerHTML = "";
+
+    const options = quiz.options || [];
+    studyQuizOptions.innerHTML = options.map((opt, oIdx) => `
+      <button type="button" onclick="handleSelectQuizOption(${oIdx}, ${quiz.correct_index}, '${encodeURIComponent(quiz.explanation || "")}')" class="quiz-option-btn w-full p-2.5 rounded-xl border border-slate-200 bg-white hover:border-indigo-400 hover:bg-indigo-50/40 text-left text-xs text-slate-700 font-medium transition flex items-center justify-between group cursor-pointer" data-index="${oIdx}">
+        <span>${escapeHtml(opt)}</span>
+        <span class="w-5 h-5 rounded-full border border-slate-300 group-hover:border-indigo-500 flex items-center justify-center text-[10px] shrink-0 text-slate-400 group-hover:text-indigo-600">
+          ${String.fromCharCode(65 + oIdx)}
+        </span>
+      </button>
+    `).join("");
+  } else {
+    studyQuizQuestion.textContent = "Không có câu hỏi trắc nghiệm nào cho bài học này.";
+    studyQuizOptions.innerHTML = "";
+  }
+
+  // 3. Render Target Goal (Advanced Materials if Advanced is selected)
+  const isAdvanced = state.targetGoal === "advanced";
+  const advList = lesson.advanced_materials || [];
+  if (isAdvanced && advList.length > 0) {
+    studyModalAdvancedSection.classList.remove("hidden");
+    studyModalAdvancedList.innerHTML = advList.map((item, idx) => `
+      <div class="p-3.5 rounded-2xl bg-purple-50/40 border border-purple-200/80 space-y-1">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-purple-950">${escapeHtml(item.title)}</span>
+          </div>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-purple-200/70 text-purple-900 font-bold">
+            ${escapeHtml(item.type || "Chuyên sâu")}
+          </span>
+        </div>
+        <p class="text-xs text-slate-600 leading-relaxed">${escapeHtml(item.description || "")}</p>
+      </div>
+    `).join("");
+  } else {
+    studyModalAdvancedSection.classList.add("hidden");
+    studyModalAdvancedList.innerHTML = "";
+  }
+}
+
+window.handleSelectQuizOption = function(selectedIndex, correctIndex, encExplanation) {
+  const explanation = decodeURIComponent(encExplanation || "");
+  const allBtns = document.querySelectorAll(".quiz-option-btn");
+  
+  allBtns.forEach((btn, idx) => {
+    btn.disabled = true;
+    btn.classList.remove("hover:border-indigo-400", "hover:bg-indigo-50/40", "cursor-pointer");
+    if (idx === correctIndex) {
+      btn.className = "quiz-option-btn w-full p-2.5 rounded-xl border-2 border-emerald-500 bg-emerald-50 text-left text-xs text-emerald-900 font-bold flex items-center justify-between";
+    } else if (idx === selectedIndex && selectedIndex !== correctIndex) {
+      btn.className = "quiz-option-btn w-full p-2.5 rounded-xl border-2 border-rose-400 bg-rose-50 text-left text-xs text-rose-800 font-medium flex items-center justify-between";
+    } else {
+      btn.className = "quiz-option-btn w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-left text-xs text-slate-400 opacity-60 flex items-center justify-between";
+    }
+  });
+
+  studyQuizFeedback.classList.remove("hidden");
+  if (selectedIndex === correctIndex) {
+    studyQuizFeedback.className = "p-3 rounded-xl bg-emerald-100/80 border border-emerald-300 text-emerald-900 text-xs font-semibold space-y-1";
+    studyQuizFeedback.innerHTML = `
+      <div class="flex items-center gap-1.5 font-bold text-emerald-800">
+        <span class="text-sm">🎉</span> CHÍNH XÁC! Bạn đã nắm rất vững kiến thức bài này.
+      </div>
+      <p class="text-[11px] text-emerald-700 leading-relaxed">${escapeHtml(explanation)}</p>
+    `;
+    if (typeof confetti === "function") {
+      confetti({ particleCount: 50, spread: 50, origin: { y: 0.7 } });
+    }
+  } else {
+    studyQuizFeedback.className = "p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs font-semibold space-y-1";
+    studyQuizFeedback.innerHTML = `
+      <div class="flex items-center gap-1.5 font-bold text-rose-800">
+        <span class="text-sm">💡</span> Chưa chính xác rồi!
+      </div>
+      <p class="text-[11px] text-slate-600 leading-relaxed">${escapeHtml(explanation)}</p>
+    `;
+  }
+};
+
+window.closeStudyModal = function() {
+  if (studyModal) studyModal.classList.add("hidden");
+  state.activeStudyTask = null;
+};
+
 window.handleToggleTask = async function(taskId) {
   try {
     const res = await fetch(`/api/tasks/${taskId}/toggle`, { method: "PATCH" });

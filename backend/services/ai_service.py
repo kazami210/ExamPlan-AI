@@ -1,4 +1,4 @@
-﻿import json
+import json
 import re
 from typing import List, Dict, Any, Optional
 import httpx
@@ -266,4 +266,151 @@ NGUYÊN TẮC BẮT BUỘC:
             f"💡 **Mẹo làm bài thi:** Nắm vững các từ khóa cốt lõi trong đoạn trên và liên hệ với các câu hỏi lý thuyết hoặc bài tập tương ứng trong đề thi!"
         )
 
+    async def generate_study_lesson(
+        self,
+        task_title: str,
+        topic_title: str,
+        context_chunks: List[str],
+        target_goal: str = "advanced",
+        api_key: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Generate 3-5 core concepts, 1 quick 2-minute quiz, and optional advanced materials."""
+        context = "\n\n---\n\n".join(context_chunks[:4]) if context_chunks else ""
+        is_advanced = target_goal in ["advanced", "g gioi", "gioi", "xuat sac"]
+
+        prompt = f"""
+Bạn là chuyên gia sư phạm đại học và cố vấn ôn thi. Hãy tạo nội dung ôn tập cô đọng và bài kiểm tra nhanh (2 phút) cho bài học sau:
+
+TÊN BÀI HỌC: {task_title}
+CHỦ ĐỀ CHÍNH: {topic_title or task_title}
+MỤC TIÊU HỌC TẬP: {'Nâng cao / Điểm giỏi (8.5 - 10.0)' if is_advanced else 'Cơ bản / Pass môn (5.0 - 7.0)'}
+
+NỘI DUNG TÀI LIỆU THAM KHẢO (ĐỀ CƯƠNG):
+\"\"\"
+{context if context else "Dựa vào kiến thức học thuật đại học chuẩn về bài học này."}
+\"\"\"
+
+YÊU CẦU ĐẦU RA (ĐỊNH DẠNG JSON DUY NHẤT):
+Trả về MỘT OBJECT JSON DUY NHẤT (không thêm văn bản nào khác ngoài JSON):
+{{
+  "task_title": "{task_title}",
+  "core_concepts": [
+    {{
+      "title": "Tên kiến thức cốt lõi 1",
+      "summary": "Nội dung tóm tắt giải thích ngắn gọn, súc tích 2-3 câu",
+      "tip": "Mẹo ghi nhớ hoặc lưu ý khi làm bài thi"
+    }}
+  ],
+  "quick_quiz": {{
+    "question": "Câu hỏi trắc nghiệm kiểm tra nhanh hiểu bài (2 phút)",
+    "options": [
+      "A. Lựa chọn 1",
+      "B. Lựa chọn 2",
+      "C. Lựa chọn 3",
+      "D. Lựa chọn 4"
+    ],
+    "correct_index": 0,
+    "explanation": "Giải thích ngắn gọn tại sao đáp án này đúng."
+  }},
+  "advanced_materials": [
+    {{
+      "title": "Tên chủ đề / bài tập nâng cao",
+      "type": "Dạng bài vận dụng cao / Mở rộng",
+      "description": "Hướng dẫn tư duy hoặc bài toán chuyên sâu giúp bứt phá điểm 9-10"
+    }}
+  ]
+}}
+
+LƯU Ý:
+- "core_concepts" phải có từ 3 đến 5 mục kiến thức trọng tâm.
+- "quick_quiz" có đúng 4 phương án lựa chọn (A, B, C, D) và 1 chỉ số đúng `correct_index` (từ 0 đến 3).
+- Nếu mục tiêu là "advanced", cung cấp 2-3 mục "advanced_materials" có tính phân hóa cao. Nếu không, có thể để mảng rỗng hoặc 1 mục nhẹ nhàng.
+"""
+        key = api_key or GEMINI_API_KEY
+        if key:
+            try:
+                raw_text = await self.call_gemini(
+                    prompt=prompt,
+                    system_prompt="Bạn là chuyên gia giáo dục thiết kế bài học micro-learning và quiz 2 phút.",
+                    api_key=key
+                )
+                parsed = extract_json_from_text(raw_text)
+                if parsed and "core_concepts" in parsed and "quick_quiz" in parsed:
+                    return parsed
+            except Exception as e:
+                print(f"[Study Lesson] Gemini API failed: {e}")
+
+        # Local fallback lesson generator grounded in context
+        return self._local_study_lesson(task_title, topic_title, context_chunks, is_advanced)
+
+    def _local_study_lesson(
+        self,
+        task_title: str,
+        topic_title: str,
+        context_chunks: List[str],
+        is_advanced: bool
+    ) -> Dict[str, Any]:
+        """Generate high-quality structured micro-lesson offline when API key is not provided."""
+        topic_name = topic_title or task_title
+        first_chunk = context_chunks[0] if context_chunks else ""
+        first_lines = [line.strip() for line in first_chunk.split("\n") if len(line.strip()) > 15]
+
+        # Extract 3 core points
+        c1 = first_lines[0] if len(first_lines) > 0 else f"Nắm vững định nghĩa và bản chất của {topic_name}."
+        c2 = first_lines[1] if len(first_lines) > 1 else f"Quy trình áp dụng và các công thức / nguyên lý trọng tâm của {task_title}."
+        c3 = first_lines[2] if len(first_lines) > 2 else "Các bẫy đề thi hay gặp và phương pháp kiểm tra kết quả nhanh."
+
+        core_concepts = [
+            {
+                "title": f"Bản chất & Khái niệm: {topic_name[:35]}",
+                "summary": c1[:180] + ("." if not c1.endswith(".") else ""),
+                "tip": "Ghi nhớ các từ khóa định nghĩa chính xác để ghi điểm phần tự luận hoặc trắc nghiệm lý thuyết."
+            },
+            {
+                "title": "Nguyên lý & Phương pháp thực thi",
+                "summary": c2[:180] + ("." if not c2.endswith(".") else ""),
+                "tip": "Vẽ sơ đồ tư duy hoặc viết lại công thức ra nháp ít nhất 2 lần trước khi làm bài tập."
+            },
+            {
+                "title": "Lưu ý & Điểm bẫy trong đề thi",
+                "summary": c3[:180] + ("." if not c3.endswith(".") else ""),
+                "tip": "Đọc kỹ giả thiết và điều kiện biên của bài toán trước khi chọn đáp án."
+            }
+        ]
+
+        quick_quiz = {
+            "question": f"Khi ôn tập nội dung '{task_title}', yếu tố nào sau đây đóng vai trò then chốt nhất?",
+            "options": [
+                f"A. Nắm vững bản chất nguyên lý và điều kiện áp dụng của {topic_name}",
+                "B. Chỉ học thuộc lòng định nghĩa mà không cần làm bài tập vận dụng",
+                "C. Bỏ qua các ví dụ minh họa và chỉ đọc lướt công thức",
+                "D. Làm các bài tập ngoài lề không liên quan đến chuẩn đầu ra"
+            ],
+            "correct_index": 0,
+            "explanation": f"Để đạt điểm cao môn thi, sinh viên cần hiểu rõ bản chất nguyên lý và điều kiện áp dụng thực tế thay vì học vẹt."
+        }
+
+        advanced_materials = []
+        if is_advanced:
+            advanced_materials = [
+                {
+                    "title": f"Bài toán Vận dụng cao: Tối ưu hóa trong {topic_name}",
+                    "type": "Bài tập phân loại (Điểm 9 - 10)",
+                    "description": f"Phân tích các ca đặc biệt, liên hệ thực tế và phối hợp kiến thức của {topic_name} với các chương nâng cao kế tiếp."
+                },
+                {
+                    "title": f"Chuyên đề phản biện & Case Study chuyên sâu",
+                    "type": "Tài liệu đọc thêm",
+                    "description": "Nghiên cứu tài liệu tham khảo mở rộng, phân tích các lỗi sai kinh điển của thí sinh trong các kỳ thi trước."
+                }
+            ]
+
+        return {
+            "task_title": task_title,
+            "core_concepts": core_concepts,
+            "quick_quiz": quick_quiz,
+            "advanced_materials": advanced_materials
+        }
+
 ai_service = AIService()
+
