@@ -1,0 +1,100 @@
+﻿/* Custom styles for ExamPlan AI */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+
+:root {
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-light: #eef2ff;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --card-bg: #ffffff;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: #f8fafc;
+  color: #1e293b;
+}
+
+h1, h2, h3, h4, .font-heading {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+/* Glassmorphism effect */
+.glass-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Animated Pulse for AI Action */
+@keyframes subtle-glow {
+  0%, 100% { box-shadow: 0 0 15px rgba(79, 70, 229, 0.2); }
+  50% { box-shadow: 0 0 25px rgba(79, 70, 229, 0.4); }
+}
+.glow-primary {
+  animation: subtle-glow 3s infinite ease-in-out;
+}
+
+/* Badge styles */
+.badge-diff-de {
+  background-color: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+.badge-diff-trung-binh {
+  background-color: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+.badge-diff-kho {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+/* Checkbox custom style */
+.task-checkbox:checked + label .task-title {
+  text-decoration: line-through;
+  color: #94a3b8;
+}
+
+/* Score Option Cards */
+.score-card {
+  border: 1.5px solid #e2e8f0;
+  background-color: #ffffff;
+  transition: all 0.2s ease-in-out;
+}
+.score-card:hover {
+  border-color: #818cf8;
+  background-color: #f8fafc;
+}
+.score-card.active {
+  border: 2px solid #4f46e5 !important;
+  background-color: #eef2ff !important;
+  box-shadow: 0 4px 12px -2px rgba(79, 70, 229, 0.15);
+}
+.score-card.active .score-title {
+  color: #3730a3 !important;
+}
+.score-card.active .score-desc {
+  color: #4f46e5 !important;
+}
