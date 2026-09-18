@@ -44,6 +44,15 @@ const studyQuizFeedback = document.getElementById("study-quiz-feedback");
 const studyModalAdvancedSection = document.getElementById("study-modal-advanced-section");
 const studyModalAdvancedList = document.getElementById("study-modal-advanced-list");
 
+// Study Modal Tabs & In-Modal Q&A DOM elements
+const tabStudyLessonBtn = document.getElementById("tab-study-lesson-btn");
+const tabStudyQaBtn = document.getElementById("tab-study-qa-btn");
+const studyModalQaPane = document.getElementById("study-modal-qa-pane");
+const studyQaMessages = document.getElementById("study-qa-messages");
+const studyQaForm = document.getElementById("study-qa-form");
+const studyQaInput = document.getElementById("study-qa-input");
+const btnStudyQaSend = document.getElementById("btn-study-qa-send");
+
 // Auth & User DOM elements
 const btnOpenLogin = document.getElementById("btn-open-login");
 const userProfileWidget = document.getElementById("user-profile-widget");
@@ -253,6 +262,29 @@ document.addEventListener("DOMContentLoaded", () => {
       if (e.target === studyModal) closeStudyModal();
     });
   }
+
+  // In-Modal Tabs switching
+  if (tabStudyLessonBtn) {
+    tabStudyLessonBtn.addEventListener("click", () => switchStudyModalTab("lesson"));
+  }
+  if (tabStudyQaBtn) {
+    tabStudyQaBtn.addEventListener("click", () => switchStudyModalTab("qa"));
+  }
+
+  // In-Modal Q&A Form
+  if (studyQaForm) {
+    studyQaForm.addEventListener("submit", handleStudyQaSubmit);
+  }
+
+  // In-Modal Quick Prompts
+  document.querySelectorAll(".btn-task-qa-prompt").forEach((b) => {
+    b.addEventListener("click", () => {
+      if (studyQaInput) {
+        studyQaInput.value = b.textContent.trim().replace(/^[^\w\s]+/, "").trim();
+        handleStudyQaSubmit(new Event("submit"));
+      }
+    });
+  });
 
   // Set default exam date to +14 days
   const defaultDate = new Date();
@@ -1615,12 +1647,19 @@ window.setTargetGoal = function(goal) {
 window.openStudyModal = async function(taskId, forceRefresh = false) {
   if (!studyModal) return;
 
-  // Find task data from state
-  const task = state.currentPlanData?.tasks?.find((t) => t.id === taskId);
+  // Find task data from state (support both int and string comparisons)
+  const task = state.currentPlanData?.tasks?.find((t) => String(t.id) === String(taskId));
   if (!task) return;
 
   state.activeStudyTask = task;
   studyModal.classList.remove("hidden");
+
+  // Always reset to Tab 1 (Lesson & Quiz) when opening
+  switchStudyModalTab("lesson");
+
+  // Clear previous Q&A thread for this fresh modal session
+  if (studyQaMessages) studyQaMessages.innerHTML = "";
+  if (studyQaInput) studyQaInput.value = "";
 
   // Populate Task Header
   studyModalTitle.textContent = task.title;
@@ -1821,6 +1860,123 @@ window.closeStudyModal = function() {
   if (studyModal) studyModal.classList.add("hidden");
   state.activeStudyTask = null;
 };
+
+window.switchStudyModalTab = function(tabName) {
+  if (tabName === "lesson") {
+    if (tabStudyLessonBtn) {
+      tabStudyLessonBtn.className = "px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 cursor-pointer";
+    }
+    if (tabStudyQaBtn) {
+      tabStudyQaBtn.className = "px-3.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 cursor-pointer";
+    }
+    if (studyModalBody) studyModalBody.classList.remove("hidden");
+    if (studyModalQaPane) studyModalQaPane.classList.add("hidden");
+  } else {
+    if (tabStudyLessonBtn) {
+      tabStudyLessonBtn.className = "px-3.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 cursor-pointer";
+    }
+    if (tabStudyQaBtn) {
+      tabStudyQaBtn.className = "px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 cursor-pointer";
+    }
+    if (studyModalBody) studyModalBody.classList.add("hidden");
+    if (studyModalQaPane) {
+      studyModalQaPane.classList.remove("hidden");
+      if (studyQaInput) studyQaInput.focus();
+    }
+  }
+  lucide.createIcons();
+};
+
+async function handleStudyQaSubmit(e) {
+  if (e) e.preventDefault();
+  if (!state.activeStudyTask) return;
+  const question = studyQaInput ? studyQaInput.value.trim() : "";
+  if (!question) return;
+
+  // Append user message
+  const userBubble = document.createElement("div");
+  userBubble.className = "flex items-start justify-end gap-2 text-xs";
+  userBubble.innerHTML = `
+    <div class="bg-indigo-600 text-white p-3 rounded-2xl rounded-tr-none max-w-[85%] shadow-xs">
+      ${escapeHtml(question)}
+    </div>
+  `;
+  studyQaMessages.appendChild(userBubble);
+  studyQaInput.value = "";
+  studyQaMessages.scrollTop = studyQaMessages.scrollHeight;
+
+  // Append AI loading bubble
+  const typingId = "qa-typing-" + Date.now();
+  const typingBubble = document.createElement("div");
+  typingBubble.id = typingId;
+  typingBubble.className = "flex items-start gap-2 text-xs";
+  typingBubble.innerHTML = `
+    <div class="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0 mt-0.5">
+      <i data-lucide="bot" class="w-3.5 h-3.5"></i>
+    </div>
+    <div class="bg-slate-100 p-3 rounded-2xl rounded-tl-none border border-slate-200 text-slate-500 max-w-[85%] animate-pulse">
+      <span class="inline-block animate-spin mr-1">✨</span> Đang đối chiếu tài liệu để giải đáp...
+    </div>
+  `;
+  studyQaMessages.appendChild(typingBubble);
+  studyQaMessages.scrollTop = studyQaMessages.scrollHeight;
+  lucide.createIcons();
+
+  if (btnStudyQaSend) btnStudyQaSend.disabled = true;
+
+  try {
+    const res = await fetch(`/api/tasks/${state.activeStudyTask.id}/ask`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+      body: JSON.stringify({
+        question: question,
+        gemini_api_key: state.geminiApiKey || null
+      })
+    });
+
+    const curTyping = document.getElementById(typingId);
+    if (curTyping) curTyping.remove();
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || "Không thể trả lời câu hỏi.");
+    }
+
+    const data = await res.json();
+    const renderedAnswer = marked.parse(data.answer);
+
+    const aiBubble = document.createElement("div");
+    aiBubble.className = "flex items-start gap-2 text-xs";
+    aiBubble.innerHTML = `
+      <div class="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+        <i data-lucide="bot" class="w-3.5 h-3.5"></i>
+      </div>
+      <div class="bg-white p-3.5 rounded-2xl rounded-tl-none border border-slate-200 text-slate-800 max-w-[85%] shadow-xs leading-relaxed prose prose-xs">
+        ${renderedAnswer}
+      </div>
+    `;
+    studyQaMessages.appendChild(aiBubble);
+  } catch (err) {
+    const curTyping = document.getElementById(typingId);
+    if (curTyping) curTyping.remove();
+
+    const errBubble = document.createElement("div");
+    errBubble.className = "flex items-start gap-2 text-xs";
+    errBubble.innerHTML = `
+      <div class="w-6 h-6 rounded-full bg-rose-600 text-white flex items-center justify-center shrink-0 mt-0.5">
+        ⚠️
+      </div>
+      <div class="bg-rose-50 p-3 rounded-2xl rounded-tl-none border border-rose-200 text-rose-800 max-w-[85%]">
+        Lỗi: ${escapeHtml(err.message)}
+      </div>
+    `;
+    studyQaMessages.appendChild(errBubble);
+  } finally {
+    if (btnStudyQaSend) btnStudyQaSend.disabled = false;
+    studyQaMessages.scrollTop = studyQaMessages.scrollHeight;
+    lucide.createIcons();
+  }
+}
 
 window.handleToggleTask = async function(taskId) {
   try {

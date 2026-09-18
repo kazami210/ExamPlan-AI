@@ -1,5 +1,5 @@
 from datetime import datetime, date
-from sqlalchemy import create_engine, Column, Integer, String, Float, Text, Boolean, Date, DateTime, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, Float, Text, Boolean, Date, DateTime, ForeignKey, text
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 from backend.config import DATABASE_URL
 
@@ -92,6 +92,9 @@ class StudyTask(Base):
     is_completed = Column(Boolean, default=False)
     completed_at = Column(DateTime, nullable=True)
     order_index = Column(Integer, default=0)
+    # Cached AI-generated lesson & quiz data (JSON string) to avoid redundant Gemini API calls
+    lesson_data_basic = Column(Text, nullable=True)
+    lesson_data_advanced = Column(Text, nullable=True)
 
     plan = relationship("StudyPlan", back_populates="tasks")
 
@@ -106,6 +109,17 @@ class ChatMessage(Base):
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+    # Safe auto-migration for existing SQLite / Postgres tables
+    try:
+        with engine.connect() as conn:
+            for col in ["lesson_data_basic", "lesson_data_advanced"]:
+                try:
+                    conn.execute(text(f"ALTER TABLE study_tasks ADD COLUMN {col} TEXT;"))
+                    conn.commit()
+                except Exception:
+                    pass
+    except Exception:
+        pass
 
 def get_db():
     db = SessionLocal()

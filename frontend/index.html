@@ -730,6 +730,17 @@
         </button>
       </div>
 
+      <!-- Navigation Tabs inside Study Modal -->
+      <div class="flex items-center gap-2 pt-3 pb-1 border-b border-slate-100 shrink-0">
+        <button type="button" id="tab-study-lesson-btn" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 cursor-pointer">
+          <i data-lucide="book-open" class="w-3.5 h-3.5"></i> Kiến Thức & Quiz
+        </button>
+        <button type="button" id="tab-study-qa-btn" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 cursor-pointer">
+          <i data-lucide="message-square" class="w-3.5 h-3.5"></i> Hỏi Đáp AI Bài Này
+          <span class="px-1.5 py-0.2 rounded-full text-[9px] bg-indigo-100 text-indigo-700 font-extrabold">Mới</span>
+        </button>
+      </div>
+
       <!-- Modal Content Body (Scrollable) -->
       <div id="study-modal-content" class="flex-1 overflow-y-auto py-4 space-y-5 pr-1 text-slate-800">
         <!-- Loading State -->
@@ -739,7 +750,7 @@
           <p class="text-xs text-slate-400">Đang tổng hợp 3-5 điểm mấu chốt và tạo Quick-Quiz 2 phút</p>
         </div>
 
-        <!-- Loaded Content Wrapper -->
+        <!-- TAB 1: Loaded Lesson & Quiz Body -->
         <div id="study-modal-body" class="hidden space-y-6">
           <!-- 3-5 Core Concepts -->
           <div>
@@ -800,6 +811,51 @@
               <!-- Rendered via JS -->
             </div>
           </div>
+        </div>
+
+        <!-- TAB 2: Dedicated In-Modal Q&A Pane -->
+        <div id="study-modal-qa-pane" class="hidden space-y-4">
+          <div class="p-3.5 bg-indigo-50/60 rounded-2xl border border-indigo-100 flex items-start gap-2.5">
+            <div class="w-7 h-7 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-xs shrink-0 mt-0.5 shadow-xs">
+              🤖
+            </div>
+            <div>
+              <h5 class="text-xs font-bold text-indigo-950">Gia Sư Trực Tiếp Bài Học Này</h5>
+              <p class="text-[11px] text-indigo-700 leading-relaxed">
+                Bạn chưa hiểu công thức, hiện tượng hoặc bài tập nào của bài? Hãy gõ câu hỏi bên dưới, AI sẽ đối chiếu trực tiếp với tài liệu đề cương để giải đáp!
+              </p>
+            </div>
+          </div>
+
+          <!-- Quick Suggested Prompts for this task -->
+          <div class="space-y-1.5">
+            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Gợi ý hỏi nhanh:</span>
+            <div class="flex flex-wrap gap-1.5" id="study-qa-quick-prompts">
+              <button type="button" class="btn-task-qa-prompt text-[11px] px-2.5 py-1 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg text-slate-600 font-medium transition cursor-pointer border border-slate-200">
+                🔍 Giải thích lại công thức cốt lõi và ý nghĩa các đại lượng
+              </button>
+              <button type="button" class="btn-task-qa-prompt text-[11px] px-2.5 py-1 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg text-slate-600 font-medium transition cursor-pointer border border-slate-200">
+                📝 Cho 1 ví dụ bài tập tự luận có lời giải chi tiết
+              </button>
+              <button type="button" class="btn-task-qa-prompt text-[11px] px-2.5 py-1 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg text-slate-600 font-medium transition cursor-pointer border border-slate-200">
+                ⚠️ Những lỗi sai học sinh hay mất điểm ở phần này là gì?
+              </button>
+            </div>
+          </div>
+
+          <!-- Q&A Conversation Thread -->
+          <div id="study-qa-messages" class="space-y-3 max-h-72 overflow-y-auto p-1">
+            <!-- Dynamically populated Q&A bubbles -->
+          </div>
+
+          <!-- Q&A Input Box -->
+          <form id="study-qa-form" class="flex gap-2 pt-2 border-t border-slate-100">
+            <input type="text" id="study-qa-input" placeholder="Đặt câu hỏi về bài học này (ví dụ: Bản chất của hiện tượng là gì?)..." class="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 rounded-xl text-xs outline-none transition">
+            <button type="submit" id="btn-study-qa-send" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-sm hover:shadow-indigo-100 transition flex items-center gap-1.5 cursor-pointer shrink-0">
+              <i data-lucide="send" class="w-3.5 h-3.5"></i>
+              <span>Gửi</span>
+            </button>
+          </form>
         </div>
       </div>
 

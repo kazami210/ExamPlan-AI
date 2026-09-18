@@ -583,19 +583,53 @@ def toggle_task(task_id: int, db: Session = Depends(get_db)):
 
     return {"success": True, "task_id": task.id, "is_completed": task.is_completed}
 
+class TaskQuestionRequest(BaseModel):
+    question: str
+    gemini_api_key: Optional[str] = None
+
 @router.post("/tasks/{task_id}/study-lesson")
 async def get_study_lesson(
     task_id: int,
     req: StudyLessonRequest = StudyLessonRequest(),
     db: Session = Depends(get_db)
 ):
-    """Retrieve micro-learning lesson with 3-5 core concepts, 2-min quiz, and advanced materials using RAG."""
+    """Retrieve micro-learning lesson with 3-5 core concepts, 2-min quiz, and advanced materials using RAG.
+    Cached permanently in the database so repeated clicks do NOT waste Gemini quota."""
     task = db.query(StudyTask).filter(StudyTask.id == task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Không tìm thấy nhiệm vụ học tập.")
 
     plan = db.query(StudyPlan).filter(StudyPlan.id == task.plan_id).first()
     doc = db.query(Document).filter(Document.id == plan.document_id).first() if plan else None
+
+    is_advanced = (req.target_goal or "advanced") in ["advanced", "g gioi", "gioi", "xuat sac"]
+    cached_field = "lesson_data_advanced" if is_advanced else "lesson_data_basic"
+    cached_val = getattr(task, cached_field, None)
+
+    if cached_val:
+        try:
+            cached_json = json.loads(cached_val)
+            if cached_json and "core_concepts" in cached_json and "quick_quiz" in cached_json:
+                return {
+                    "success": True,
+                    "task": {
+                        "id": task.id,
+                        "title": task.title,
+                        "topic_title": task.topic_title,
+                        "description": task.description,
+                        "task_type": task.task_type,
+                        "difficulty": task.difficulty,
+                        "estimated_minutes": task.estimated_minutes,
+                        "is_completed": task.is_completed,
+                        "study_date": task.study_date.isoformat(),
+                        "day_number": task.day_number,
+                    },
+                    "target_goal": req.target_goal or "advanced",
+                    "lesson": cached_json,
+                    "from_cache": True
+                }
+        except Exception:
+            pass
 
     # Retrieve relevant semantic chunks using RAG from the syllabus/document
     relevant_chunks = []
@@ -612,6 +646,13 @@ async def get_study_lesson(
         api_key=req.gemini_api_key
     )
 
+    # Save to database cache
+    try:
+        setattr(task, cached_field, json.dumps(lesson_data, ensure_ascii=False))
+        db.commit()
+    except Exception as e:
+        db.rollback()
+
     return {
         "success": True,
         "task": {
@@ -627,7 +668,40 @@ async def get_study_lesson(
             "day_number": task.day_number,
         },
         "target_goal": req.target_goal or "advanced",
-        "lesson": lesson_data
+        "lesson": lesson_data,
+        "from_cache": False
+    }
+
+@router.post("/tasks/{task_id}/ask")
+async def ask_task_question(
+    task_id: int,
+    req: TaskQuestionRequest,
+    db: Session = Depends(get_db)
+):
+    """Direct Q&A inside Study Modal answering student queries specifically about this task and syllabus."""
+    task = db.query(StudyTask).filter(StudyTask.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Không tìm thấy nhiệm vụ học tập.")
+
+    plan = db.query(StudyPlan).filter(StudyPlan.id == task.plan_id).first()
+    doc = db.query(Document).filter(Document.id == plan.document_id).first() if plan else None
+
+    context_chunks = []
+    if doc and doc.extracted_text:
+        chunks = chunk_text(doc.extracted_text, chunk_size=700, overlap=100)
+        search_query = f"{task.title} {task.topic_title or ''} {req.question}".strip()
+        context_chunks = search_relevant_chunks(search_query, chunks, top_k=4)
+
+    answer = await ai_service.answer_question(
+        question=req.question,
+        context_chunks=context_chunks,
+        api_key=req.gemini_api_key
+    )
+
+    return {
+        "success": True,
+        "question": req.question,
+        "answer": answer
     }
 
 @router.post("/plans/{plan_id}/reschedule")

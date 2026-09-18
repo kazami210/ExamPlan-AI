@@ -279,59 +279,65 @@ NGUYÊN TẮC BẮT BUỘC:
         is_advanced = target_goal in ["advanced", "g gioi", "gioi", "xuat sac"]
 
         prompt = f"""
-Bạn là chuyên gia sư phạm đại học và cố vấn ôn thi. Hãy tạo nội dung ôn tập cô đọng và bài kiểm tra nhanh (2 phút) cho bài học sau:
+Bạn là chuyên gia giảng dạy đại học hàng đầu về môn học này. Hãy trích xuất và giảng giải KIẾN THỨC CHUYÊN MÔN CỤ THỂ, TRỰC DIỆN từ tài liệu đề cương cho bài học sau:
 
 TÊN BÀI HỌC: {task_title}
 CHỦ ĐỀ CHÍNH: {topic_title or task_title}
-MỤC TIÊU HỌC TẬP: {'Nâng cao / Điểm giỏi (8.5 - 10.0)' if is_advanced else 'Cơ bản / Pass môn (5.0 - 7.0)'}
+MỤC TIÊU: {'Nâng cao / Điểm giỏi (8.5 - 10.0)' if is_advanced else 'Cơ bản / Pass môn (5.0 - 7.0)'}
 
-NỘI DUNG TÀI LIỆU THAM KHẢO (ĐỀ CƯƠNG):
+NỘI DUNG TÀI LIỆU TRÍCH XUẤT TỪ ĐỀ CƯƠNG:
 \"\"\"
-{context if context else "Dựa vào kiến thức học thuật đại học chuẩn về bài học này."}
+{context if context else "Dựa vào kiến thức chuyên môn học thuật chính xác về chủ đề này."}
 \"\"\"
 
-YÊU CẦU ĐẦU RA (ĐỊNH DẠNG JSON DUY NHẤT):
-Trả về MỘT OBJECT JSON DUY NHẤT (không thêm văn bản nào khác ngoài JSON):
+NGUYÊN TẮC BẮT BUỘC VỀ NỘI DUNG (VI PHẠM LÀ THẤT BẠI):
+1. TÓM TẮT KIẾN THỨC CHUYÊN MÔN THỰC TẾ:
+   - Phải trích xuất ĐỊNH NGHĨA CHÍNH XÁC, ĐỊNH LUẬT, CÔNG THỨC TOÁN/LÝ/HÓA/TIN HỌC, ĐIỀU KIỆN ÁP DỤNG, BẢN CHẤT HIỆN TƯỢNG, HỆ QUẢ.
+   - TUYỆT ĐỐI KHÔNG viết các câu khuyên mẹo học, kỹ năng mềm hay meta-learning sáo rỗng như "hãy đọc kỹ", "lập thời gian biểu", "vẽ sơ đồ tư duy", "ôn tập đều đặn".
+   - Mỗi mục phải có tên rõ ràng và phần nội dung chuyên môn cô đọng, có công thức/ký hiệu nếu môn tự nhiên.
+2. QUICK-QUIZ TRẮC NGHIỆM:
+   - Câu hỏi trắc nghiệm PHẢI HỎI VỀ KIẾN THỨC CHUYÊN MÔN CỤ THỂ, CÔNG THỨC HOẶC TÍNH TOÁN CỦA CHỦ ĐỀ NÀY (Ví dụ: "Công thức tính từ thông phi là?", "Theo định luật Lenz, dòng điện cảm ứng có chiều thế nào?", "Điều kiện để xảy ra hiện tượng... là?").
+   - TUYỆT ĐỐI KHÔNG hỏi các câu kiểu: "Yếu tố nào quan trọng nhất khi học...", "Làm thế nào để nhớ bài...", "Phương pháp nào sau đây giúp thi tốt...".
+   - 4 phương án A, B, C, D rõ ràng với 1 đáp án đúng duy nhất.
+
+YÊU CẦU ĐẦU RA (CHỈ TRẢ VỀ JSON HỢP LỆ, KHÔNG KÈM VĂN BẢN NGOÀI):
 {{
   "task_title": "{task_title}",
   "core_concepts": [
     {{
-      "title": "Tên kiến thức cốt lõi 1",
-      "summary": "Nội dung tóm tắt giải thích ngắn gọn, súc tích 2-3 câu",
-      "tip": "Mẹo ghi nhớ hoặc lưu ý khi làm bài thi"
+      "title": "Tên khái niệm / Định luật / Công thức cụ thể",
+      "summary": "Nội dung học thuật chi tiết: Định nghĩa, công thức toán học/khoa học, hiện tượng hoặc quy tắc chuyên môn.",
+      "tip": "Đặc điểm nhận dạng trong bài tập hoặc hệ quả công thức quan trọng"
     }}
   ],
   "quick_quiz": {{
-    "question": "Câu hỏi trắc nghiệm kiểm tra nhanh hiểu bài (2 phút)",
+    "question": "Câu hỏi chuyên môn / công thức / khái niệm cụ thể của bài học?",
     "options": [
-      "A. Lựa chọn 1",
-      "B. Lựa chọn 2",
-      "C. Lựa chọn 3",
-      "D. Lựa chọn 4"
+      "A. Nội dung lựa chọn A",
+      "B. Nội dung lựa chọn B",
+      "C. Nội dung lựa chọn C",
+      "D. Nội dung lựa chọn D"
     ],
     "correct_index": 0,
-    "explanation": "Giải thích ngắn gọn tại sao đáp án này đúng."
+    "explanation": "Giải thích chi tiết về mặt chuyên môn/công thức tại sao đáp án này đúng."
   }},
   "advanced_materials": [
     {{
-      "title": "Tên chủ đề / bài tập nâng cao",
-      "type": "Dạng bài vận dụng cao / Mở rộng",
-      "description": "Hướng dẫn tư duy hoặc bài toán chuyên sâu giúp bứt phá điểm 9-10"
+      "title": "Dạng bài toán / Chuyên đề vận dụng cao",
+      "type": "Vận dụng cao (Điểm 9 - 10)",
+      "description": "Các bài toán biến thiên, phương pháp giải nhanh hoặc trường hợp phức tạp"
     }}
   ]
 }}
 
-LƯU Ý:
-- "core_concepts" phải có từ 3 đến 5 mục kiến thức trọng tâm.
-- "quick_quiz" có đúng 4 phương án lựa chọn (A, B, C, D) và 1 chỉ số đúng `correct_index` (từ 0 đến 3).
-- Nếu mục tiêu là "advanced", cung cấp 2-3 mục "advanced_materials" có tính phân hóa cao. Nếu không, có thể để mảng rỗng hoặc 1 mục nhẹ nhàng.
+LƯU Ý: "core_concepts" phải có từ 3 đến 5 mục kiến thức học thuật chuyên sâu.
 """
         key = api_key or GEMINI_API_KEY
         if key:
             try:
                 raw_text = await self.call_gemini(
                     prompt=prompt,
-                    system_prompt="Bạn là chuyên gia giáo dục thiết kế bài học micro-learning và quiz 2 phút.",
+                    system_prompt="Bạn là giáo sư đại học giảng dạy môn học này. Bạn chỉ trả lời kiến thức chuyên môn thực tế, công thức, định lý và bài tập trắc nghiệm học thuật, không nói chuyện ngoài lề.",
                     api_key=key
                 )
                 parsed = extract_json_from_text(raw_text)
@@ -350,58 +356,87 @@ LƯU Ý:
         context_chunks: List[str],
         is_advanced: bool
     ) -> Dict[str, Any]:
-        """Generate high-quality structured micro-lesson offline when API key is not provided."""
+        """Generate concrete domain-specific micro-lesson offline extracting real textbook lines."""
         topic_name = topic_title or task_title
-        first_chunk = context_chunks[0] if context_chunks else ""
-        first_lines = [line.strip() for line in first_chunk.split("\n") if len(line.strip()) > 15]
+        combined_text = "\n".join(context_chunks) if context_chunks else ""
+        
+        # Extract substantial academic sentences/paragraphs from raw syllabus
+        raw_lines = [
+            line.strip().lstrip("-*•0123456789. ") 
+            for line in combined_text.split("\n") 
+            if len(line.strip()) > 20 and not line.strip().startswith("#")
+        ]
 
-        # Extract 3 core points
-        c1 = first_lines[0] if len(first_lines) > 0 else f"Nắm vững định nghĩa và bản chất của {topic_name}."
-        c2 = first_lines[1] if len(first_lines) > 1 else f"Quy trình áp dụng và các công thức / nguyên lý trọng tâm của {task_title}."
-        c3 = first_lines[2] if len(first_lines) > 2 else "Các bẫy đề thi hay gặp và phương pháp kiểm tra kết quả nhanh."
+        def get_clean_line(idx: int, default: str) -> str:
+            if idx < len(raw_lines):
+                return raw_lines[idx][:250]
+            return default
+
+        concept1_content = get_clean_line(
+            0,
+            f"Định nghĩa và bản chất của {topic_name}: Xác định rõ các thông số đặc trưng, tiên đề cơ bản và phạm vi nghiên cứu của chủ đề."
+        )
+        concept2_content = get_clean_line(
+            1,
+            f"Nguyên lý vận hành & Công thức liên hệ: Mối quan hệ giữa các biến số, phương trình toán học và quy luật chi phối {task_title}."
+        )
+        concept3_content = get_clean_line(
+            2,
+            f"Tính chất đặc trưng & Các trường hợp giới hạn: Sự biến thiên của hệ thống khi các điều kiện biên hoặc tham số thay đổi."
+        )
+        concept4_content = get_clean_line(
+            3,
+            f"Hệ quả thực nghiệm và ứng dụng tính toán: Phương pháp áp dụng quy tắc giải các bài toán định lượng và giải thích hiện tượng quan sát."
+        )
 
         core_concepts = [
             {
-                "title": f"Bản chất & Khái niệm: {topic_name[:35]}",
-                "summary": c1[:180] + ("." if not c1.endswith(".") else ""),
-                "tip": "Ghi nhớ các từ khóa định nghĩa chính xác để ghi điểm phần tự luận hoặc trắc nghiệm lý thuyết."
+                "title": f"Định nghĩa & Bản chất cốt lõi: {topic_name[:40]}",
+                "summary": concept1_content,
+                "tip": f"Từ khóa chuyên ngành cốt lõi cần nhớ: {topic_name.split()[-1] if topic_name else 'Thuật ngữ'}."
             },
             {
-                "title": "Nguyên lý & Phương pháp thực thi",
-                "summary": c2[:180] + ("." if not c2.endswith(".") else ""),
-                "tip": "Vẽ sơ đồ tư duy hoặc viết lại công thức ra nháp ít nhất 2 lần trước khi làm bài tập."
+                "title": f"Quy luật & Công thức liên hệ của {task_title[:35]}",
+                "summary": concept2_content,
+                "tip": "Chú ý đơn vị đo lường và dấu âm/dương trong các phương trình liên hệ."
             },
             {
-                "title": "Lưu ý & Điểm bẫy trong đề thi",
-                "summary": c3[:180] + ("." if not c3.endswith(".") else ""),
-                "tip": "Đọc kỹ giả thiết và điều kiện biên của bài toán trước khi chọn đáp án."
+                "title": "Tính chất đặc trưng & Điều kiện áp dụng",
+                "summary": concept3_content,
+                "tip": "Đặc biệt chú ý điều kiện tiên quyết để định lý/quy tắc có hiệu lực."
+            },
+            {
+                "title": "Hệ quả & Dạng bài tập điển hình",
+                "summary": concept4_content,
+                "tip": "Nhận diện dạng bài thông qua các đại lượng đã cho và đại lượng cần tìm."
             }
         ]
 
+        # Domain-specific quiz question based on actual topic name
         quick_quiz = {
-            "question": f"Khi ôn tập nội dung '{task_title}', yếu tố nào sau đây đóng vai trò then chốt nhất?",
+            "question": f"Về mặt chuyên môn của nội dung '{topic_name}', phát biểu hoặc tính chất nào sau đây là ĐÚNG?",
             "options": [
-                f"A. Nắm vững bản chất nguyên lý và điều kiện áp dụng của {topic_name}",
-                "B. Chỉ học thuộc lòng định nghĩa mà không cần làm bài tập vận dụng",
-                "C. Bỏ qua các ví dụ minh họa và chỉ đọc lướt công thức",
-                "D. Làm các bài tập ngoài lề không liên quan đến chuẩn đầu ra"
+                f"A. {concept1_content[:90]}...",
+                f"B. Đại lượng trong {topic_name[:25]} luôn triệt tiêu về 0 ở mọi điều kiện bất kỳ",
+                f"C. Hoàn toàn độc lập và không tuân theo các định luật bảo toàn của hệ",
+                f"D. Chỉ xuất hiện trong môi trường lý tưởng và không có ý nghĩa thực nghiệm"
             ],
             "correct_index": 0,
-            "explanation": f"Để đạt điểm cao môn thi, sinh viên cần hiểu rõ bản chất nguyên lý và điều kiện áp dụng thực tế thay vì học vẹt."
+            "explanation": f"Khái niệm chuẩn xác: {concept1_content[:150]}... Đây là nền tảng chi phối bản chất của {topic_name}."
         }
 
         advanced_materials = []
         if is_advanced:
             advanced_materials = [
                 {
-                    "title": f"Bài toán Vận dụng cao: Tối ưu hóa trong {topic_name}",
-                    "type": "Bài tập phân loại (Điểm 9 - 10)",
-                    "description": f"Phân tích các ca đặc biệt, liên hệ thực tế và phối hợp kiến thức của {topic_name} với các chương nâng cao kế tiếp."
+                    "title": f"Dạng bài phân loại điểm 9-10: Bài toán phi tuyến & đa biến trong {topic_name}",
+                    "type": "Vận dụng cao",
+                    "description": f"Phân tích hệ phương trình khi các hệ số phụ thuộc vào thời gian/trạng thái. Thiết lập mô hình giải tích chính xác."
                 },
                 {
-                    "title": f"Chuyên đề phản biện & Case Study chuyên sâu",
-                    "type": "Tài liệu đọc thêm",
-                    "description": "Nghiên cứu tài liệu tham khảo mở rộng, phân tích các lỗi sai kinh điển của thí sinh trong các kỳ thi trước."
+                    "title": f"Chuyên đề nâng cao: Các định luật mở rộng và trường hợp đặc biệt",
+                    "type": "Chuyên sâu",
+                    "description": f"Kỹ thuật biến đổi đưa các bài toán phức tạp của {task_title} về dạng chuẩn tắc để tính toán nhanh trong phòng thi."
                 }
             ]
 
