@@ -2,30 +2,30 @@
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#1e1b4b"/>
-      <stop offset="100%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#2e1065"/>
     </linearGradient>
   </defs>
   <rect width="960" height="540" fill="url(#bg)"/>
   
   <rect x="40" y="30" width="200" height="32" rx="16" fill="#ffffff" fill-opacity="0.2"/>
-  <text x="140" y="51" fill="#ffffff" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">SLIDE 02 / 02 • CHƯƠNG 1</text>
-  <text x="40" y="105" fill="#ffffff" font-family="system-ui, sans-serif" font-size="26" font-weight="900">CHƯƠNG 1: SỰ RA ĐỜI CỦA CHỦ NGHĨA MÁC - LÊNIN</text>
-  <text x="40" y="135" fill="#cbd5e1" font-family="system-ui, sans-serif" font-size="15">Tiền đề kinh tế - xã hội, khoa học tự nhiên và lý luận</text>
+  <text x="140" y="51" fill="#ffffff" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">SLIDE 02 / 04 • CHƯƠNG 1</text>
+  <text x="40" y="105" fill="#ffffff" font-family="system-ui, sans-serif" font-size="26" font-weight="900">CHƯƠNG 1: CÁC TRƯỜNG PHÁI TRIẾT HỌC LỚN</text>
+  <text x="40" y="135" fill="#cbd5e1" font-family="system-ui, sans-serif" font-size="15">Chủ nghĩa Duy vật và Chủ nghĩa Duy tâm</text>
 
   <rect x="40" y="165" width="880" height="330" rx="20" fill="#000000" fill-opacity="0.35" stroke="#ffffff" stroke-opacity="0.15" stroke-width="1.5"/>
 
   <circle cx="75" cy="215" r="15" fill="#ffffff" fill-opacity="0.25"/>
   <text x="75" y="220" fill="#ffffff" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">1</text>
-  <text x="105" y="210" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="16" font-weight="bold">Tiền đề kinh tế - xã hội</text>
-  <text x="105" y="237" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="14">Sự phát triển mạnh mẽ của phương thức sản xuất tư bản chủ nghĩa và phong trào công nhân thế kỷ XIX.</text>
+  <text x="105" y="210" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="16" font-weight="bold">Chủ nghĩa Duy vật (CNDV)</text>
+  <text x="105" y="237" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="14">Trải qua 3 hình thức: CNDV chất phác ngây thơ cổ đại, CNDV siêu hình thế kỷ XVII-XVIII, CNDV biện chứng.</text>
 
   <circle cx="75" cy="303" r="15" fill="#ffffff" fill-opacity="0.25"/>
   <text x="75" y="308" fill="#ffffff" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">2</text>
-  <text x="105" y="298" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="16" font-weight="bold">Ba phát minh khoa học tự nhiên</text>
-  <text x="105" y="325" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="14">Định luật bảo toàn và chuyển hóa năng lượng, Thuyết tế bào, Thuyết tiến hóa của Darwin.</text>
+  <text x="105" y="298" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="16" font-weight="bold">Chủ nghĩa Duy tâm (CNDT)</text>
+  <text x="105" y="325" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="14">Gồm Duy tâm chủ quan (thế giới là phức hợp cảm giác) và Duy tâm khách quan (Ý niệm tuyệt đối).</text>
 
   <circle cx="75" cy="391" r="15" fill="#ffffff" fill-opacity="0.25"/>
   <text x="75" y="396" fill="#ffffff" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">3</text>
-  <text x="105" y="386" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="16" font-weight="bold">Tiền đề lý luận</text>
-  <text x="105" y="413" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="14">Kế thừa có phê phán Triết học cổ điển Đức, Kinh tế chính trị cổ điển Anh và Chủ nghĩa xã hội không tưởng Pháp.</text>
+  <text x="105" y="386" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="16" font-weight="bold">Thuyết Nhị nguyên luận</text>
+  <text x="105" y="413" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="14">Coi vật chất và ý thức là 2 bản nguyên song song tồn tại, cuối cùng rơi vào duy tâm.</text>
 </svg>

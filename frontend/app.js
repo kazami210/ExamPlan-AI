@@ -1713,8 +1713,8 @@ window.openStudyModal = async function(taskId, forceRefresh = false) {
 
   updateStudyModalDoneButton(task.is_completed);
 
-  // Render slides immediately from task data
-  renderTaskSlides(task.image_urls || []);
+  // Render slides immediately from task data with scoped range
+  renderTaskSlides(task.image_urls || [], task.slide_scope);
 
   // Check in-memory cache for this task + targetGoal
   const cacheKey = `${taskId}_${state.targetGoal}`;
@@ -1749,9 +1749,12 @@ window.openStudyModal = async function(taskId, forceRefresh = false) {
     const data = await res.json();
     state.studyLessonCache[cacheKey] = data.lesson;
 
-    if (data.task && data.task.image_urls) {
-      task.image_urls = data.task.image_urls;
-      renderTaskSlides(data.task.image_urls);
+    if (data.task) {
+      task.image_urls = data.task.image_urls || [];
+      task.slide_scope = data.task.slide_scope || task.slide_scope;
+      task.start_page = data.task.start_page;
+      task.end_page = data.task.end_page;
+      renderTaskSlides(data.task.image_urls, data.task.slide_scope);
     }
 
     studyModalLoading.classList.add("hidden");
@@ -1782,15 +1785,17 @@ function updateStudyModalDoneButton(isCompleted) {
 
 // --- Study Slide Viewer Logic ---
 
-function renderTaskSlides(images) {
+function renderTaskSlides(images, slideScope = null) {
   state.activeSlideImages = Array.isArray(images) ? images : [];
   const total = state.activeSlideImages.length;
+  const currentTask = state.activeStudyTask;
+  const scopeLabel = slideScope || currentTask?.slide_scope || null;
 
   if (studySlideCountBadge) {
-    studySlideCountBadge.textContent = `${total} Slide`;
+    studySlideCountBadge.textContent = scopeLabel ? `${scopeLabel}` : `${total} Slide`;
   }
 
-  // If no slides for this chapter, completely hide the slides section
+  // If no slides for this task/scope, completely hide the slides section
   if (total === 0) {
     if (studyModalSlidesSection) studyModalSlidesSection.classList.add("hidden");
     if (studySlideCarouselContainer) studySlideCarouselContainer.classList.add("hidden");
@@ -1822,7 +1827,7 @@ function renderTaskSlides(images) {
       studySlideCarouselImg.src = currentUrl;
     }
     if (studySlidePageIndicator) {
-      studySlidePageIndicator.textContent = `Trang ${state.activeSlideIndex + 1} / ${total}`;
+      studySlidePageIndicator.textContent = scopeLabel ? `Trang ${state.activeSlideIndex + 1} / ${total} • ${scopeLabel}` : `Trang ${state.activeSlideIndex + 1} / ${total}`;
     }
     if (btnSlideFullscreen) {
       btnSlideFullscreen.href = currentUrl;
@@ -1854,7 +1859,7 @@ function renderTaskSlides(images) {
       studySlideScrollContainer.innerHTML = state.activeSlideImages.map((url, idx) => `
         <div class="bg-slate-950 rounded-2xl p-3 sm:p-4 border border-slate-800 shadow-md space-y-2">
           <div class="flex items-center justify-between text-xs text-slate-300 px-1">
-            <span class="font-bold text-indigo-400">Slide ${idx + 1} / ${total}</span>
+            <span class="font-bold text-indigo-400">Slide ${idx + 1} / ${total}${scopeLabel ? ` (${scopeLabel})` : ""}</span>
             <a href="${url}" target="_blank" class="text-[11px] text-slate-400 hover:text-white flex items-center gap-1">
               <i data-lucide="external-link" class="w-3 h-3"></i> Xem ảnh gốc
             </a>

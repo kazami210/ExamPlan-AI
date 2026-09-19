@@ -2,30 +2,30 @@
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#1e3a8a"/>
-      <stop offset="100%" stop-color="#1e1b4b"/>
+      <stop offset="100%" stop-color="#0c4a6e"/>
     </linearGradient>
   </defs>
   <rect width="960" height="540" fill="url(#bg)"/>
   
   <rect x="40" y="30" width="200" height="32" rx="16" fill="#ffffff" fill-opacity="0.2"/>
-  <text x="140" y="51" fill="#ffffff" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">SLIDE 02 / 02 • CHƯƠNG 5</text>
-  <text x="40" y="105" fill="#ffffff" font-family="system-ui, sans-serif" font-size="26" font-weight="900">CHƯƠNG 5: HIỆN TƯỢNG TỰ CẢM VÀ NĂNG LƯỢNG TỪ TRƯỜNG</text>
-  <text x="40" y="135" fill="#cbd5e1" font-family="system-ui, sans-serif" font-size="15">Hệ số tự cảm L và Năng lượng từ tích lũy</text>
+  <text x="140" y="51" fill="#ffffff" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">SLIDE 02 / 04 • CHƯƠNG 5</text>
+  <text x="40" y="105" fill="#ffffff" font-family="system-ui, sans-serif" font-size="26" font-weight="900">CHƯƠNG 5: ĐỊNH LUẬT LENZ & DÒNG FOUCAULT</text>
+  <text x="40" y="135" fill="#cbd5e1" font-family="system-ui, sans-serif" font-size="15">Xác định chiều suất điện động và dòng điện cảm ứng</text>
 
   <rect x="40" y="165" width="880" height="330" rx="20" fill="#000000" fill-opacity="0.35" stroke="#ffffff" stroke-opacity="0.15" stroke-width="1.5"/>
 
   <circle cx="75" cy="215" r="15" fill="#ffffff" fill-opacity="0.25"/>
   <text x="75" y="220" fill="#ffffff" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">1</text>
-  <text x="105" y="210" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="16" font-weight="bold">Hiện tượng Tự cảm (Self-Induction)</text>
-  <text x="105" y="237" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="14">Khi dòng điện biến thiên, từ thông riêng biến thiên gây ra suất điện động tự cảm: e_tc = - L * (di/dt).</text>
+  <text x="105" y="210" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="16" font-weight="bold">Định luật Lenz về chiều dòng điện</text>
+  <text x="105" y="237" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="14">Dòng điện cảm ứng xuất hiện có chiều sao cho từ trường do nó sinh ra chống lại sự biến thiên của từ thông ban đầu.</text>
 
   <circle cx="75" cy="303" r="15" fill="#ffffff" fill-opacity="0.25"/>
   <text x="75" y="308" fill="#ffffff" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">2</text>
-  <text x="105" y="298" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="16" font-weight="bold">Độ tự cảm của cuộn dây</text>
-  <text x="105" y="325" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="14">Cuộn dây có chiều dài l, tiết diện S, N vòng: L = mu0 * (N^2 / l) * S. Đơn vị đo là Henry (H).</text>
+  <text x="105" y="298" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="16" font-weight="bold">Dấu trừ trong định luật Faraday</text>
+  <text x="105" y="325" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="14">Dấu trừ biểu thị sự phù hợp tuyệt đối với Định luật Lenz và Định luật bảo toàn năng lượng.</text>
 
   <circle cx="75" cy="391" r="15" fill="#ffffff" fill-opacity="0.25"/>
   <text x="75" y="396" fill="#ffffff" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">3</text>
-  <text x="105" y="386" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="16" font-weight="bold">Năng lượng từ trường</text>
-  <text x="105" y="413" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="14">Năng lượng từ trường tích lũy trong cuộn cảm: W = 1/2 * L * I^2; Mật độ năng lượng: w = B^2 / (2 * mu0).</text>
+  <text x="105" y="386" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="16" font-weight="bold">Dòng điện Foucault (Dòng xoáy)</text>
+  <text x="105" y="413" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="14">Dòng điện cảm ứng sinh ra trong khối kim loại khi chuyển động trong từ trường hoặc đặt trong từ trường biến thiên.</text>
 </svg>

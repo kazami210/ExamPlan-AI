@@ -143,6 +143,106 @@ def find_available_slides(task_title: str, topic_title: str = "", task_id: int =
 
     return discovered
 
+def partition_chapter_slides_for_tasks(tasks_for_chapter: List[Dict], all_chapter_slides: List[str]):
+    """
+    Intelligently partitions chapter slides across tasks based on the number of sessions
+    and task types, assigning strictly scoped slide subsets with start_page, end_page, and slide_scope.
+    """
+    total_slides = len(all_chapter_slides)
+    if total_slides == 0:
+        for t in tasks_for_chapter:
+            t["start_page"] = None
+            t["end_page"] = None
+            t["slide_scope"] = None
+            t["image_urls"] = []
+        return
+
+    # Separate learning sessions vs review sessions
+    primary_tasks = [t for t in tasks_for_chapter if t.get("task_type") == "study_new"]
+    review_tasks = [t for t in tasks_for_chapter if t.get("task_type") == "spaced_review"]
+    other_tasks = [t for t in tasks_for_chapter if t.get("task_type") not in ["study_new", "spaced_review"]]
+
+    num_primary = len(primary_tasks)
+
+    if num_primary <= 1:
+        for t in primary_tasks:
+            t["start_page"] = 1
+            t["end_page"] = total_slides
+            t["slide_scope"] = f"Slide 1 - {total_slides} (Toàn bộ chương)" if total_slides > 1 else "Slide 1 (Trọn vẹn)"
+            t["image_urls"] = list(all_chapter_slides)
+    else:
+        chunk_size = max(1, (total_slides + num_primary - 1) // num_primary)
+        for idx, t in enumerate(primary_tasks):
+            start_idx = idx * chunk_size
+            end_idx = min(total_slides, (idx + 1) * chunk_size)
+            if start_idx >= total_slides:
+                start_idx = total_slides - 1
+                end_idx = total_slides
+
+            scoped_slides = all_chapter_slides[start_idx:end_idx]
+            s_num = start_idx + 1
+            e_num = end_idx
+            if s_num == e_num:
+                t["slide_scope"] = f"Slide {s_num} (Phần {idx + 1}/{num_primary})"
+            else:
+                t["slide_scope"] = f"Slide {s_num} - {e_num} (Phần {idx + 1}/{num_primary})"
+            t["start_page"] = s_num
+            t["end_page"] = e_num
+            t["image_urls"] = scoped_slides
+
+    # Review tasks: Focus strictly on key synthesis slides
+    for r_idx, t in enumerate(review_tasks):
+        rev_start = max(0, total_slides - 2) if total_slides >= 2 else 0
+        rev_slides = all_chapter_slides[rev_start:]
+        t["start_page"] = rev_start + 1
+        t["end_page"] = total_slides
+        t["slide_scope"] = f"Slide {rev_start + 1} - {total_slides} (Trọng tâm ôn tập)" if len(rev_slides) > 1 else f"Slide {total_slides} (Trọng tâm ôn tập)"
+        t["image_urls"] = rev_slides
+
+    # Final review / practice exam tasks
+    for t in other_tasks:
+        t["start_page"] = None
+        t["end_page"] = None
+        t["slide_scope"] = None
+        t["image_urls"] = []
+
+def assign_plan_task_scopes(plan_id: int, db: Session):
+    """
+    Computes and persists scoped slide ranges (start_page, end_page, slide_scope, image_urls)
+    for all tasks in a plan.
+    """
+    import re
+    tasks = db.query(StudyTask).filter(StudyTask.plan_id == plan_id).order_by(StudyTask.study_date, StudyTask.order_index).all()
+    if not tasks:
+        return
+
+    def get_ch_key(t):
+        full_text = f"{t.title} {t.topic_title or ''}".lower()
+        m = re.search(r"(?:chương|chuong|ch|bài|bai)\s*(\d+)", full_text)
+        return f"ch_{m.group(1)}" if m else (t.topic_title or "general")
+
+    groups = {}
+    for t in tasks:
+        groups.setdefault(get_ch_key(t), []).append(t)
+
+    for key, task_group in groups.items():
+        sample = task_group[0]
+        all_slides = find_available_slides(sample.title, sample.topic_title or "", None)
+        
+        task_dicts = [{"task_type": t.task_type, "title": t.title, "topic_title": t.topic_title} for t in task_group]
+        partition_chapter_slides_for_tasks(task_dicts, all_slides)
+
+        for t_orm, t_dict in zip(task_group, task_dicts):
+            t_orm.start_page = t_dict.get("start_page")
+            t_orm.end_page = t_dict.get("end_page")
+            t_orm.slide_scope = t_dict.get("slide_scope")
+            t_orm.image_urls = json.dumps(t_dict.get("image_urls", []), ensure_ascii=False) if t_dict.get("image_urls") else None
+
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+
 # --- Auth Endpoints ---
 
 @router.get("/config")
@@ -588,6 +688,9 @@ async def generate_plan(req: PlanGenerateRequest, authorization: Optional[str] =
         db.add(task)
     db.commit()
 
+    # Automatically partition & assign slide scopes per task content range
+    assign_plan_task_scopes(plan.id, db)
+
     return get_plan_details_internal(plan.id, db)
 
 def get_plan_details_internal(plan_id: int, db: Session):
@@ -597,6 +700,11 @@ def get_plan_details_internal(plan_id: int, db: Session):
 
     tasks = db.query(StudyTask).filter(StudyTask.plan_id == plan.id).order_by(StudyTask.study_date, StudyTask.order_index).all()
     
+    # Retroactively compute scopes if not yet set for existing plans
+    if tasks and any(t.slide_scope is None and t.task_type == "study_new" for t in tasks):
+        assign_plan_task_scopes(plan.id, db)
+        tasks = db.query(StudyTask).filter(StudyTask.plan_id == plan.id).order_by(StudyTask.study_date, StudyTask.order_index).all()
+
     total_tasks = len(tasks)
     completed_tasks = sum(1 for t in tasks if t.is_completed)
     progress_pct = round((completed_tasks / total_tasks * 100), 1) if total_tasks > 0 else 0
@@ -606,8 +714,6 @@ def get_plan_details_internal(plan_id: int, db: Session):
     task_dicts = []
     for t in tasks:
         slides = parse_image_urls(t.image_urls)
-        if not slides:
-            slides = find_available_slides(t.title, t.topic_title or "", t.id)
         task_dicts.append({
             "id": t.id,
             "study_date": t.study_date.isoformat(),
@@ -620,6 +726,9 @@ def get_plan_details_internal(plan_id: int, db: Session):
             "estimated_minutes": t.estimated_minutes,
             "is_completed": t.is_completed,
             "order_index": t.order_index,
+            "start_page": t.start_page,
+            "end_page": t.end_page,
+            "slide_scope": t.slide_scope,
             "image_urls": slides
         })
 
@@ -700,16 +809,7 @@ async def get_study_lesson(
         try:
             cached_json = json.loads(cached_val)
             if cached_json and "core_concepts" in cached_json and "quick_quiz" in cached_json:
-                # Ensure slides are auto-discovered from static library if image_urls is empty
                 slides = parse_image_urls(task.image_urls)
-                if not slides:
-                    slides = find_available_slides(task.title, task.topic_title or "", task.id)
-                    if slides:
-                        try:
-                            task.image_urls = json.dumps(slides, ensure_ascii=False)
-                            db.commit()
-                        except Exception:
-                            pass
                 return {
                     "success": True,
                     "task": {
@@ -723,6 +823,9 @@ async def get_study_lesson(
                         "is_completed": task.is_completed,
                         "study_date": task.study_date.isoformat(),
                         "day_number": task.day_number,
+                        "start_page": task.start_page,
+                        "end_page": task.end_page,
+                        "slide_scope": task.slide_scope,
                         "image_urls": slides
                     },
                     "target_goal": req.target_goal or "advanced",
@@ -747,12 +850,7 @@ async def get_study_lesson(
         api_key=req.gemini_api_key
     )
 
-    # Auto-discover slides if not already set
     slides = parse_image_urls(task.image_urls)
-    if not slides:
-        slides = find_available_slides(task.title, task.topic_title or "", task.id)
-        if slides:
-            task.image_urls = json.dumps(slides, ensure_ascii=False)
 
     # Save to database cache
     try:
@@ -774,6 +872,9 @@ async def get_study_lesson(
             "is_completed": task.is_completed,
             "study_date": task.study_date.isoformat(),
             "day_number": task.day_number,
+            "start_page": task.start_page,
+            "end_page": task.end_page,
+            "slide_scope": task.slide_scope,
             "image_urls": slides
         },
         "target_goal": req.target_goal or "advanced",
