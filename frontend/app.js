@@ -48,6 +48,9 @@ const studyModalTopic = document.getElementById("study-modal-topic");
 const studyModalLoading = document.getElementById("study-modal-loading");
 const studyModalBody = document.getElementById("study-modal-body");
 const studyModalConceptsList = document.getElementById("study-modal-concepts-list");
+const studyModalExamplesSection = document.getElementById("study-modal-examples-section");
+const studyModalExamplesList = document.getElementById("study-modal-examples-list");
+const studyExamplesModeBadge = document.getElementById("study-examples-mode-badge");
 const studyQuizQuestion = document.getElementById("study-quiz-question");
 const studyQuizOptions = document.getElementById("study-quiz-options");
 const studyQuizFeedback = document.getElementById("study-quiz-feedback");
@@ -1973,27 +1976,105 @@ window.switchSlideMode = function(mode) {
 function renderStudyLessonContent(lesson) {
   if (!lesson) return;
 
-  // 1. Render 3 - 5 Core Concepts
-  const concepts = lesson.core_concepts || [];
-  studyModalConceptsList.innerHTML = concepts.map((c, idx) => `
-    <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-indigo-200 hover:bg-indigo-50/20 transition space-y-1.5">
-      <div class="flex items-center gap-2">
-        <span class="w-5 h-5 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black shrink-0">
-          ${idx + 1}
-        </span>
-        <h5 class="text-xs font-bold text-slate-900">${escapeHtml(c.title || `Khái niệm ${idx + 1}`)}</h5>
-      </div>
-      <p class="text-xs text-slate-600 leading-relaxed pl-7">${escapeHtml(c.summary || "")}</p>
-      ${c.tip ? `
-        <div class="ml-7 p-2 rounded-xl bg-amber-50/80 border border-amber-200/60 text-[11px] text-amber-900 flex items-start gap-1.5">
-          <span class="shrink-0 text-amber-600 font-bold">💡 Mẹo thi:</span>
-          <span>${escapeHtml(c.tip)}</span>
-        </div>
-      ` : ""}
-    </div>
-  `).join("");
+  const summaryMode = lesson.summary_mode || state.summaryMode || "quick";
+  const isDetailed = summaryMode === "detailed";
 
-  // 2. Render Quick Quiz
+  // 1. Render Core Concepts & Formulas (Merged in one block for clear identification)
+  const concepts = lesson.core_concepts || [];
+  studyModalConceptsList.innerHTML = concepts.map((c, idx) => {
+    const title = c.title || `Khái niệm & Công thức ${idx + 1}`;
+    const definition = c.definition || c.summary || "";
+    const formula = c.formula || "";
+    const unitNote = c.unit_and_note || "";
+    const tip = c.tip || "";
+
+    return `
+      <div class="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs hover:border-indigo-300 hover:shadow-sm transition space-y-2.5">
+        <!-- Header: Number & Concept Title -->
+        <div class="flex items-center gap-2">
+          <span class="w-6 h-6 rounded-lg ${isDetailed ? "bg-purple-600" : "bg-indigo-600"} text-white flex items-center justify-center text-[11px] font-black shrink-0 shadow-xs">
+            ${idx + 1}
+          </span>
+          <h5 class="text-xs sm:text-sm font-extrabold text-slate-900">${escapeHtml(title)}</h5>
+        </div>
+
+        <!-- Unified Content Block: Definition + Formula merged directly together -->
+        <div class="space-y-2 pl-0 sm:pl-8">
+          ${definition ? `
+            <p class="text-xs text-slate-700 leading-relaxed font-normal">
+              ${escapeHtml(definition)}
+            </p>
+          ` : ""}
+
+          ${formula ? `
+            <div class="p-2.5 sm:p-3 rounded-xl bg-slate-900 text-amber-300 font-mono text-xs sm:text-sm font-bold flex items-center justify-between border border-slate-800 shadow-inner">
+              <span class="tracking-wide">${escapeHtml(formula)}</span>
+              <span class="text-[10px] text-slate-400 font-sans font-normal uppercase tracking-wider px-2 py-0.5 rounded bg-slate-800">Công thức</span>
+            </div>
+          ` : ""}
+
+          ${unitNote ? `
+            <p class="text-[11px] text-slate-500 italic leading-normal">
+              ${escapeHtml(unitNote)}
+            </p>
+          ` : ""}
+
+          ${tip ? `
+            <div class="p-2 rounded-xl bg-amber-50/90 border border-amber-200/70 text-[11px] text-amber-900 flex items-start gap-1.5">
+              <span class="shrink-0 text-amber-600 font-bold">💡 ${isDetailed ? "Bẫy đề thi:" : "Mẹo thi 3s:"}</span>
+              <span class="font-medium">${escapeHtml(tip)}</span>
+            </div>
+          ` : ""}
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  // 2. Render Separate Examples Section (Ví dụ & Bài tập minh họa tách riêng)
+  const examples = lesson.examples || [];
+  if (studyModalExamplesSection && studyModalExamplesList) {
+    if (examples.length > 0) {
+      studyModalExamplesSection.classList.remove("hidden");
+      if (studyExamplesModeBadge) {
+        studyExamplesModeBadge.textContent = isDetailed ? "Giải chi tiết từng bước" : "Dạng bài nhận diện 30s";
+        studyExamplesModeBadge.className = isDetailed 
+          ? "text-[10px] px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 font-bold border border-purple-200"
+          : "text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200";
+      }
+
+      studyModalExamplesList.innerHTML = examples.map((ex, exIdx) => `
+        <div class="p-3.5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-2">
+          <div class="flex items-center justify-between">
+            <h5 class="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+              <span class="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[9px] font-black">
+                ${exIdx + 1}
+              </span>
+              <span>${escapeHtml(ex.title || `Ví dụ minh họa ${exIdx + 1}`)}</span>
+            </h5>
+            <span class="text-[10px] text-emerald-700 font-bold bg-white px-2 py-0.5 rounded-md border border-emerald-200 shadow-2xs">
+              ${isDetailed ? "Bài toán mẫu" : "Tính nhanh"}
+            </span>
+          </div>
+
+          <div class="text-xs text-slate-800 bg-white/80 p-2.5 rounded-xl border border-emerald-100/80 font-medium leading-relaxed">
+            <span class="font-bold text-emerald-800">Đề bài: </span>${escapeHtml(ex.problem || "")}
+          </div>
+
+          ${ex.solution ? `
+            <div class="text-xs text-slate-700 p-2.5 rounded-xl bg-emerald-100/40 border border-emerald-200/60 leading-relaxed space-y-1">
+              <span class="font-bold text-emerald-900 block">💡 ${isDetailed ? "Hướng dẫn giải chi tiết:" : "Cách xử lý nhanh:"}</span>
+              <div class="whitespace-pre-line pl-1 text-[11.5px]">${escapeHtml(ex.solution)}</div>
+            </div>
+          ` : ""}
+        </div>
+      `).join("");
+    } else {
+      studyModalExamplesSection.classList.add("hidden");
+      studyModalExamplesList.innerHTML = "";
+    }
+  }
+
+  // 3. Render Quick Quiz
   const quiz = lesson.quick_quiz;
   if (quiz && quiz.question) {
     studyQuizQuestion.textContent = quiz.question;
@@ -2014,7 +2095,7 @@ function renderStudyLessonContent(lesson) {
     studyQuizOptions.innerHTML = "";
   }
 
-  // 3. Render Target Goal (Advanced Materials if Advanced is selected)
+  // 4. Render Target Goal (Advanced Materials if Advanced is selected)
   const isAdvanced = state.targetGoal === "advanced";
   const advList = lesson.advanced_materials || [];
   if (isAdvanced && advList.length > 0) {

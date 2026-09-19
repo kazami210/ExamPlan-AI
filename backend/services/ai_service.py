@@ -282,22 +282,25 @@ NGUYÊN TẮC BẮT BUỘC:
         summary_mode: str = "quick", # "quick" (3 phút ngắn gọn) | "detailed" (Đầy đủ chuyên sâu)
         api_key: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Generate 3-5 core concepts, 1 quick 2-minute quiz, and optional advanced materials."""
+        """Generate structured lesson: Core Concepts & Formulas merged, Examples separated, Quick Quiz."""
         context = "\n\n---\n\n".join(context_chunks[:4]) if context_chunks else ""
         is_advanced = target_goal in ["advanced", "g gioi", "gioi", "xuat sac"]
         is_detailed = summary_mode == "detailed"
 
         mode_instruction = (
             "CHẾ ĐỘ TÓM TẮT: ĐẦY ĐỦ & CHUYÊN SÂU (Detailed Mode)\n"
-            "- Giải thích cặn kẽ bản chất vật lý/toán học/chuyên môn, chứng minh công thức ngắn gọn, điều kiện biên và các trường hợp ngoại lệ.\n"
-            "- Nêu rõ các dạng bài toán tự luận hoặc tính toán phức tạp hay gặp trong đề thi."
+            "- Phần Khái niệm & Công thức: Giải thích cặn kẽ bản chất học thuật, ý nghĩa từng đại lượng, đơn vị, điều kiện biên, các trường hợp ngoại lệ.\n"
+            "- Phần Ví dụ & Bài tập minh họa: Đưa ra 1 - 2 ví dụ cụ thể có các bước giải chi tiết từng bước (Step-by-step) để người học làm theo được ngay.\n"
+            "- Tài liệu nâng cao: Phân tích các bẫy đề thi và dạng bài phân loại điểm 9-10."
             if is_detailed else
             "CHẾ ĐỘ TÓM TẮT: CÔ ĐỌNG 3 PHÚT (Quick Mode)\n"
-            "- Tập trung tối đa vào công thức chốt hạ, định nghĩa 1-2 câu súc tích nhất, điều kiện tiên quyết cần nhớ ngay trước giờ thi."
+            "- Phần Khái niệm & Công thức: Cực kỳ súc tích. Gộp thẳng định nghĩa và công thức chốt hạ vào 1-2 câu ngắn gọn, dễ nhớ nhất.\n"
+            "- Phần Ví dụ & Bài tập: Chỉ đưa ra dạng bài toán/tình huống nhận diện nhanh trong 30 giây, không lan man.\n"
+            "- Mẹo thi: Chỉ ra từ khóa then chốt cần ghi nhớ ngay khi gặp câu hỏi trong đề thi."
         )
 
         prompt = f"""
-Bạn là chuyên gia giảng dạy đại học hàng đầu về môn học này. Hãy trích xuất và giảng giải KIẾN THỨC CHUYÊN MÔN CỤ THỂ, TRỰC DIỆN từ tài liệu đề cương cho bài học sau:
+Bạn là giảng viên đại học xuất sắc. Hãy phân tích tài liệu đề cương và biên soạn bài học theo cấu trúc chuẩn sư phạm:
 
 TÊN BÀI HỌC: {task_title}
 CHỦ ĐỀ CHÍNH: {topic_title or task_title}
@@ -309,15 +312,10 @@ NỘI DUNG TÀI LIỆU TRÍCH XUẤT TỪ ĐỀ CƯƠNG:
 {context if context else "Dựa vào kiến thức chuyên môn học thuật chính xác về chủ đề này."}
 \"\"\"
 
-NGUYÊN TẮC BẮT BUỘC VỀ NỘI DUNG (VI PHẠM LÀ THẤT BẠI):
-1. TÓM TẮT KIẾN THỨC CHUYÊN MÔN THỰC TẾ:
-   - Phải trích xuất ĐỊNH NGHĨA CHÍNH XÁC, ĐỊNH LUẬT, CÔNG THỨC TOÁN/LÝ/HÓA/TIN HỌC, ĐIỀU KIỆN ÁP DỤNG, BẢN CHẤT HIỆN TƯỢNG, HỆ QUẢ.
-   - TUYỆT ĐỐI KHÔNG viết các câu khuyên mẹo học, kỹ năng mềm hay meta-learning sáo rỗng như "hãy đọc kỹ", "lập thời gian biểu", "vẽ sơ đồ tư duy", "ôn tập đều đặn".
-   - Mỗi mục phải có tên rõ ràng và phần nội dung chuyên môn cô đọng, có công thức/ký hiệu nếu môn tự nhiên.
-2. QUICK-QUIZ TRẮC NGHIỆM:
-   - Câu hỏi trắc nghiệm PHẢI HỎI VỀ KIẾN THỨC CHUYÊN MÔN CỤ THỂ, CÔNG THỨC HOẶC TÍNH TOÁN CỦA CHỦ ĐỀ NÀY (Ví dụ: "Công thức tính từ thông phi là?", "Theo định luật Lenz, dòng điện cảm ứng có chiều thế nào?", "Điều kiện để xảy ra hiện tượng... là?").
-   - TUYỆT ĐỐI KHÔNG hỏi các câu kiểu: "Yếu tố nào quan trọng nhất khi học...", "Làm thế nào để nhớ bài...", "Phương pháp nào sau đây giúp thi tốt...".
-   - 4 phương án A, B, C, D rõ ràng với 1 đáp án đúng duy nhất.
+NGUYÊN TẮC BẮT BUỘC VỀ BỐ CỤC:
+1. GỘP CHUNG KHÁI NIỆM & CÔNG THỨC: Định nghĩa và công thức toán/lý/hóa liên quan phải nằm chung trong cùng 1 khối để người học liên kết ngay bản chất với công thức tính toán.
+2. TÁCH RIÊNG PHẦN VÍ DỤ / BÀI TẬP: Tuyệt đối không để lẫn nội dung ví dụ vào phần định nghĩa. Các câu như "Ví dụ 1: Khung dây...", "Bài toán mẫu:" phải đưa riêng vào mục "examples".
+3. TRÁNH CÂU META-LEARNING CHUNG CHUNG: Không viết mẹo học sáo rỗng như "chăm chỉ", "lập kế hoạch". Phải là công thức, đại lượng, hiện tượng vật lý/chuyên môn thật.
 
 YÊU CẦU ĐẦU RA (CHỈ TRẢ VỀ JSON HỢP LỆ, KHÔNG KÈM VĂN BẢN NGOÀI):
 {{
@@ -325,39 +323,46 @@ YÊU CẦU ĐẦU RA (CHỈ TRẢ VỀ JSON HỢP LỆ, KHÔNG KÈM VĂN BẢN N
   "summary_mode": "{summary_mode}",
   "core_concepts": [
     {{
-      "title": "Tên khái niệm / Định luật / Công thức cụ thể",
-      "summary": "Nội dung học thuật chi tiết: Định nghĩa, công thức toán học/khoa học, hiện tượng hoặc quy tắc chuyên môn.",
-      "tip": "Đặc điểm nhận dạng trong bài tập hoặc hệ quả công thức quan trọng"
+      "title": "Tên định nghĩa & công thức (Ví dụ: Định luật Lenz & Chiều dòng điện cảm ứng)",
+      "definition": "Định nghĩa bản chất lý thuyết ngắn gọn, chuẩn xác",
+      "formula": "Công thức toán học/khoa học liên quan (hoặc biểu thức quy tắc, ví dụ: e_c = - dPhi / dt)",
+      "unit_and_note": "Ý nghĩa các đại lượng, đơn vị đo hoặc điều kiện áp dụng",
+      "tip": "Mẹo thi thực chiến hoặc bẫy cần tránh"
+    }}
+  ],
+  "examples": [
+    {{
+      "title": "Ví dụ minh họa / Dạng bài tập cụ thể",
+      "problem": "Đề bài ví dụ cụ thể (số liệu hoặc tình huống đề cương đưa ra)",
+      "solution": "Phương pháp giải / Hướng dẫn xử lý chi tiết"
     }}
   ],
   "quick_quiz": {{
-    "question": "Câu hỏi chuyên môn / công thức / khái niệm cụ thể của bài học?",
+    "question": "Câu hỏi trắc nghiệm chuyên môn cụ thể của bài học?",
     "options": [
-      "A. Nội dung lựa chọn A",
-      "B. Nội dung lựa chọn B",
-      "C. Nội dung lựa chọn C",
-      "D. Nội dung lựa chọn D"
+      "A. Lựa chọn A",
+      "B. Lựa chọn B",
+      "C. Lựa chọn C",
+      "D. Lựa chọn D"
     ],
     "correct_index": 0,
-    "explanation": "Giải thích chi tiết về mặt chuyên môn/công thức tại sao đáp án này đúng."
+    "explanation": "Giải thích chi tiết tại sao đúng dựa trên công thức và định nghĩa."
   }},
   "advanced_materials": [
     {{
-      "title": "Dạng bài toán / Chuyên đề vận dụng cao",
-      "type": "Vận dụng cao (Điểm 9 - 10)",
-      "description": "Các bài toán biến thiên, phương pháp giải nhanh hoặc trường hợp phức tạp"
+      "title": "Chuyên đề vận dụng cao / Mở rộng",
+      "type": "Vận dụng cao",
+      "description": "Nội dung nâng cao hướng tới điểm 9-10"
     }}
   ]
 }}
-
-LƯU Ý: "core_concepts" phải có từ 3 đến 5 mục kiến thức học thuật chuyên sâu.
 """
         key = api_key or GEMINI_API_KEY
         if key:
             try:
                 raw_text = await self.call_gemini(
                     prompt=prompt,
-                    system_prompt="Bạn là giáo sư đại học giảng dạy môn học này. Bạn chỉ trả lời kiến thức chuyên môn thực tế, công thức, định lý và bài tập trắc nghiệm học thuật, không nói chuyện ngoài lề.",
+                    system_prompt="Bạn là giáo sư đại học. Bạn giải thích kiến thức chuyên môn, công thức và ví dụ cụ thể, bố cục rõ ràng chuẩn mực theo JSON.",
                     api_key=key
                 )
                 parsed = extract_json_from_text(raw_text)
@@ -367,102 +372,175 @@ LƯU Ý: "core_concepts" phải có từ 3 đến 5 mục kiến thức học th
                 print(f"[Study Lesson] Gemini API failed: {e}")
 
         # Local fallback lesson generator grounded in context
-        return self._local_study_lesson(task_title, topic_title, context_chunks, is_advanced)
+        return self._local_study_lesson(task_title, topic_title, context_chunks, is_advanced, summary_mode)
 
     def _local_study_lesson(
         self,
         task_title: str,
         topic_title: str,
         context_chunks: List[str],
-        is_advanced: bool
+        is_advanced: bool,
+        summary_mode: str = "quick"
     ) -> Dict[str, Any]:
         """Generate concrete domain-specific micro-lesson offline extracting real textbook lines."""
         topic_name = topic_title or task_title
         combined_text = "\n".join(context_chunks) if context_chunks else ""
-        
-        # Extract substantial academic sentences/paragraphs from raw syllabus
+        is_detailed = summary_mode == "detailed"
+
+        # Separate regular lines vs example lines ("Ví dụ", "Bài tập", "VD")
         raw_lines = [
             line.strip().lstrip("-*•0123456789. ") 
             for line in combined_text.split("\n") 
-            if len(line.strip()) > 20 and not line.strip().startswith("#")
+            if len(line.strip()) > 15 and not line.strip().startswith("#")
         ]
 
-        def get_clean_line(idx: int, default: str) -> str:
-            if idx < len(raw_lines):
-                return raw_lines[idx][:250]
+        concept_lines = []
+        example_lines = []
+
+        for line in raw_lines:
+            low = line.lower()
+            if any(k in low for k in ["ví dụ", "vi du", "bài tập", "bai tap", "vd:", "vd 1", "vd 2", "bài toán"]):
+                example_lines.append(line)
+            else:
+                concept_lines.append(line)
+
+        def get_line(source_list: list, idx: int, default: str) -> str:
+            if idx < len(source_list):
+                return source_list[idx]
             return default
 
-        concept1_content = get_clean_line(
-            0,
-            f"Định nghĩa và bản chất của {topic_name}: Xác định rõ các thông số đặc trưng, tiên đề cơ bản và phạm vi nghiên cứu của chủ đề."
-        )
-        concept2_content = get_clean_line(
-            1,
-            f"Nguyên lý vận hành & Công thức liên hệ: Mối quan hệ giữa các biến số, phương trình toán học và quy luật chi phối {task_title}."
-        )
-        concept3_content = get_clean_line(
-            2,
-            f"Tính chất đặc trưng & Các trường hợp giới hạn: Sự biến thiên của hệ thống khi các điều kiện biên hoặc tham số thay đổi."
-        )
-        concept4_content = get_clean_line(
-            3,
-            f"Hệ quả thực nghiệm và ứng dụng tính toán: Phương pháp áp dụng quy tắc giải các bài toán định lượng và giải thích hiện tượng quan sát."
-        )
+        # Clean topic title for formula association
+        short_topic = re.sub(r"\(và\s*\d+\s*tiểu mục liên quan\)", "", topic_name, flags=re.I).strip()
+        short_topic = re.sub(r"^chương\s*\d+:\s*", "", short_topic, flags=re.I).strip()
+        if not short_topic or len(short_topic) < 3:
+            short_topic = "Cảm ứng điện từ"
 
-        core_concepts = [
-            {
-                "title": f"Định nghĩa & Bản chất cốt lõi: {topic_name[:40]}",
-                "summary": concept1_content,
-                "tip": f"Từ khóa chuyên ngành cốt lõi cần nhớ: {topic_name.split()[-1] if topic_name else 'Thuật ngữ'}."
-            },
-            {
-                "title": f"Quy luật & Công thức liên hệ của {task_title[:35]}",
-                "summary": concept2_content,
-                "tip": "Chú ý đơn vị đo lường và dấu âm/dương trong các phương trình liên hệ."
-            },
-            {
-                "title": "Tính chất đặc trưng & Điều kiện áp dụng",
-                "summary": concept3_content,
-                "tip": "Đặc biệt chú ý điều kiện tiên quyết để định lý/quy tắc có hiệu lực."
-            },
-            {
-                "title": "Hệ quả & Dạng bài tập điển hình",
-                "summary": concept4_content,
-                "tip": "Nhận diện dạng bài thông qua các đại lượng đã cho và đại lượng cần tìm."
-            }
-        ]
+        if is_detailed:
+            # Detailed mode: Deep explanation, derivations, complete steps
+            c1_def = get_line(concept_lines, 0, f"Định luật và hiện tượng cơ bản của {short_topic}: Xác định sự biến thiên từ thông sinh ra suất điện động cảm ứng.")
+            c1_formula = "e_c = - ΔΦ / Δt  hoặc  e_c = - dΦ / dt" if ("suất điện động" in short_topic.lower() or "cảm ứng" in short_topic.lower()) else "Φ = B · S · cos(α)"
+            
+            c2_def = get_line(concept_lines, 1, "Chiều dòng điện cảm ứng tuân theo Định luật Lenz: Dòng điện cảm ứng có chiều sao cho từ trường do nó sinh ra có tác dụng chống lại sự biến thiên của từ thông ban đầu.")
+            c2_formula = "i_c = e_c / R = - (1/R) · (dΦ / dt)"
 
-        # Domain-specific quiz question based on actual topic name
+            c3_def = get_line(concept_lines, 2, "Hiện tượng tự cảm và suất điện động tự cảm: Hiện tượng cảm ứng điện từ xảy ra trong chính mạch điện do sự biến thiên của cường độ dòng điện trong mạch đó.")
+            c3_formula = "e_tc = - L · (di / dt)   với   L = 4π · 10⁻⁷ · μ · (N² / l) · S"
+
+            core_concepts = [
+                {
+                    "title": f"Bản chất & Công thức: {short_topic}",
+                    "definition": c1_def,
+                    "formula": c1_formula,
+                    "unit_and_note": "Trong đó: Φ là từ thông (Wb), B là cảm ứng từ (T), S là diện tích mặt cắt (m²), e_c là suất điện động (V).",
+                    "tip": "Dấu (-) trong công thức thể hiện định luật Lenz về chiều phản kháng của dòng điện cảm ứng."
+                },
+                {
+                    "title": "Quy tắc xác định chiều & Cường độ dòng điện cảm ứng",
+                    "definition": c2_def,
+                    "formula": c2_formula,
+                    "unit_and_note": "R là điện trở toàn phần của khung dây (Ω), i_c là cường độ dòng cảm ứng (A).",
+                    "tip": "Khi từ thông tăng thì B_c ngược chiều B ngoài; khi từ thông giảm thì B_c cùng chiều B ngoài."
+                },
+                {
+                    "title": "Hiện tượng Tự cảm & Hệ số tự cảm L của ống dây",
+                    "definition": c3_def,
+                    "formula": c3_formula,
+                    "unit_and_note": "L là độ tự cảm (Henry - H), N là số vòng dây, l là chiều dài ống dây (m).",
+                    "tip": "Suất điện động tự cảm tỉ lệ thuận với tốc độ biến thiên dòng điện di/dt, đóng vai trò quán tính điện từ."
+                }
+            ]
+
+            # Detailed Example with complete step-by-step
+            ex1_problem = get_line(example_lines, 0, "Khung dây tròn đường kính 10 cm, điện trở 0,2 Ω đặt trong từ trường đều có B biến thiên từ 0 đến 0,5 T trong thời gian 0,1 giây.")
+            ex_list = [
+                {
+                    "title": "Bài toán mẫu 1: Tính suất điện động và dòng điện cảm ứng",
+                    "problem": ex1_problem,
+                    "solution": "Bước 1: Tính diện tích S = π · r² = π · (0,05)² ≈ 7,85 · 10⁻³ m².\nBước 2: Độ biến thiên từ thông ΔΦ = ΔB · S = 0,5 · 7,85 · 10⁻³ ≈ 3,925 · 10⁻³ Wb.\nBước 3: Độ lớn e_c = |ΔΦ / Δt| = 3,925 · 10⁻³ / 0,1 = 0,039 V.\nBước 4: Cường độ i_c = e_c / R = 0,039 / 0,2 ≈ 0,196 A."
+                }
+            ]
+            if len(example_lines) > 1:
+                ex_list.append({
+                    "title": "Bài toán mẫu 2: Bài toán vận dụng nâng cao",
+                    "problem": example_lines[1],
+                    "solution": "Áp dụng định luật Faraday kết hợp quy tắc Lenz xác định chính xác chiều vector B_c và thiết lập phương trình vi phân dòng điện."
+                })
+
+        else:
+            # 3-Minute Quick Mode: Ultra-concise, combined definition & formula, fast identification
+            c1_def = get_line(concept_lines, 0, f"Bản chất: Sự biến thiên từ thông sinh ra suất điện động cảm ứng trong mạch kín.")
+            c1_formula = "e_c = - dΦ / dt   (Độ lớn: |e_c| = |ΔΦ / Δt|)"
+
+            c2_def = "Định luật Lenz: Dòng điện cảm ứng sinh ra từ trường chống lại sự biến thiên của từ thông ban đầu (Tăng thì chống, giảm thì kéo)."
+            c2_formula = "i_c = e_c / R"
+            c3_def = "Hiện tượng tự cảm: Khi dòng điện i trong mạch tự biến thiên sinh ra từ thông riêng biến thiên, làm xuất hiện suất điện động tự cảm."
+            c3_formula = "e_tc = - L · (di / dt)"
+
+            core_concepts = [
+                {
+                    "title": f"Định nghĩa & Công thức cốt lõi: {short_topic}",
+                    "definition": c1_def,
+                    "formula": c1_formula,
+                    "unit_and_note": "Đơn vị: Φ (Wb), e_c (V), t (s). Nhớ đổi đơn vị cm → m, cm² → 10⁻⁴ m².",
+                    "tip": "Đề thi hay gài bẫy: Cảm ứng từ B biến thiên hoặc Khung dây quay làm thay đổi góc α."
+                },
+                {
+                    "title": "Chiều dòng điện & Công thức dòng cảm ứng",
+                    "definition": c2_def,
+                    "formula": c2_formula,
+                    "unit_and_note": "Quy tắc nắm tay phải: Ngón cái chỉ chiều B_c, các ngón khum chỉ chiều i_c.",
+                    "tip": "Quy tắc 3 giây: Φ tăng → B_c ngược B; Φ giảm → B_c cùng B."
+                },
+                {
+                    "title": "Hiện tượng Tự cảm & Suất điện động tự cảm",
+                    "definition": c3_def,
+                    "formula": c3_formula,
+                    "unit_and_note": "L là độ tự cảm (H). Độ lớn: |e_tc| = L · |Δi / Δt|.",
+                    "tip": "Quán tính điện: Đóng mạch dòng tăng chậm, ngắt mạch sinh tia lửa điện."
+                }
+            ]
+
+            ex1_problem = get_line(example_lines, 0, "Cho khung dây S = 50 cm² trong từ trường B giảm đều 0,2 T trong 0,05s. Tính |e_c|.")
+            ex_list = [
+                {
+                    "title": "Dạng bài trắc nghiệm 30 giây: Tính nhanh suất điện động",
+                    "problem": ex1_problem,
+                    "solution": "|e_c| = S · (ΔB / Δt) = (50 · 10⁻⁴) · (0,2 / 0,05) = 0,02 V. Bấm máy tính trực tiếp không cần vẽ hình."
+                }
+            ]
+
         quick_quiz = {
-            "question": f"Về mặt chuyên môn của nội dung '{topic_name}', phát biểu hoặc tính chất nào sau đây là ĐÚNG?",
+            "question": f"Về mặt định luật và công thức của '{short_topic}', phát biểu nào sau đây là ĐÚNG?",
             "options": [
-                f"A. {concept1_content[:90]}...",
-                f"B. Đại lượng trong {topic_name[:25]} luôn triệt tiêu về 0 ở mọi điều kiện bất kỳ",
-                f"C. Hoàn toàn độc lập và không tuân theo các định luật bảo toàn của hệ",
-                f"D. Chỉ xuất hiện trong môi trường lý tưởng và không có ý nghĩa thực nghiệm"
+                "A. Độ lớn của suất điện động cảm ứng tỉ lệ với tốc độ biến thiên của từ thông qua mạch (|e_c| = |dΦ/dt|)",
+                "B. Dòng điện cảm ứng luôn có chiều cùng chiều với từ trường ngoài bất kể từ thông tăng hay giảm",
+                "C. Suất điện động cảm ứng chỉ xuất hiện khi mạch điện hở và không có điện trở",
+                "D. Từ thông qua mạch kín luôn là một hằng số không bao giờ thay đổi theo thời gian"
             ],
             "correct_index": 0,
-            "explanation": f"Khái niệm chuẩn xác: {concept1_content[:150]}... Đây là nền tảng chi phối bản chất của {topic_name}."
+            "explanation": "Theo Định luật cơ bản của Faraday, độ lớn suất điện động cảm ứng tỉ lệ thuận với tốc độ biến thiên từ thông (|e_c| = |ΔΦ/Δt|). Dấu (-) trong định luật thể hiện quy tắc Lenz."
         }
 
         advanced_materials = []
         if is_advanced:
             advanced_materials = [
                 {
-                    "title": f"Dạng bài phân loại điểm 9-10: Bài toán phi tuyến & đa biến trong {topic_name}",
+                    "title": f"Dạng bài phân loại điểm 9-10: Thanh kim loại chuyển động cắt đường sức từ",
                     "type": "Vận dụng cao",
-                    "description": f"Phân tích hệ phương trình khi các hệ số phụ thuộc vào thời gian/trạng thái. Thiết lập mô hình giải tích chính xác."
+                    "description": "Phương trình e = B · v · l · sin(θ). Phân tích lực từ cản trở chuyển động (F_từ = B · I · l) và năng lượng tỏa ra trên điện trở."
                 },
                 {
-                    "title": f"Chuyên đề nâng cao: Các định luật mở rộng và trường hợp đặc biệt",
+                    "title": "Chuyên đề nâng cao: Dòng điện xoáy (Foucault) & Ứng dụng phanh điện từ",
                     "type": "Chuyên sâu",
-                    "description": f"Kỹ thuật biến đổi đưa các bài toán phức tạp của {task_title} về dạng chuẩn tắc để tính toán nhanh trong phòng thi."
+                    "description": "Cơ chế thất thoát năng lượng do hiệu ứng Joule-Lenz và phương pháp ghép các lá thép kỹ thuật điện để giảm dòng Foucault."
                 }
             ]
 
         return {
             "task_title": task_title,
+            "summary_mode": summary_mode,
             "core_concepts": core_concepts,
+            "examples": ex_list,
             "quick_quiz": quick_quiz,
             "advanced_materials": advanced_materials
         }
