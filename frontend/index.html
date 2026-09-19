@@ -811,16 +811,39 @@
             </div>
           </div>
 
-          <!-- 3-5 Core Concepts -->
+          <!-- 3-5 Core Concepts with Mode Selector & Action Buttons -->
           <div>
-            <div class="flex items-center justify-between mb-3">
-              <h4 class="text-xs font-black uppercase tracking-wider text-indigo-800 flex items-center gap-2">
-                <i data-lucide="check-circle-2" class="w-4 h-4 text-indigo-600"></i> Kiến Thức Cốt Lõi Cần Nhớ (Core Concepts)
-              </h4>
-              <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">
-                AI Tóm Tắt Từ Đề Cương
-              </span>
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3.5 pb-2 border-b border-slate-100">
+              <div>
+                <h4 class="text-xs font-black uppercase tracking-wider text-indigo-900 flex items-center gap-2">
+                  <i data-lucide="check-circle-2" class="w-4 h-4 text-indigo-600"></i> Kiến Thức Cốt Lõi (AI Tóm Tắt)
+                </h4>
+                <p class="text-[11px] text-slate-500 mt-0.5">Trích xuất định nghĩa, công thức toán/lý và bài tập từ tài liệu</p>
+              </div>
+
+              <!-- Summary Mode Controls & Refresh Button -->
+              <div class="flex items-center gap-1.5 self-start sm:self-auto">
+                <div class="inline-flex p-0.5 bg-slate-100 rounded-lg text-xs font-bold text-slate-600">
+                  <button type="button" id="btn-summary-mode-quick" onclick="setSummaryMode('quick')" class="px-2.5 py-1 rounded-md text-[11px] font-bold transition bg-indigo-600 text-white shadow-xs cursor-pointer flex items-center gap-1" title="Tóm tắt 3 phút cô đọng nhất">
+                    ⚡ 3 Phút
+                  </button>
+                  <button type="button" id="btn-summary-mode-detailed" onclick="setSummaryMode('detailed')" class="px-2.5 py-1 rounded-md text-[11px] font-semibold transition text-slate-600 hover:text-slate-900 cursor-pointer flex items-center gap-1" title="Tóm tắt chi tiết đầy đủ công thức">
+                    📖 Chi tiết
+                  </button>
+                </div>
+
+                <button type="button" id="btn-refresh-study-lesson" onclick="refreshStudyLesson()" class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition cursor-pointer border border-slate-200" title="Tạo lại tóm tắt bằng AI">
+                  <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
             </div>
+
+            <!-- In-card Loading indicator when toggling modes -->
+            <div id="study-concepts-loading" class="hidden py-8 text-center space-y-2">
+              <span class="inline-block animate-spin text-xl">✨</span>
+              <p class="text-xs font-bold text-slate-600">Đang tóm tắt kiến thức theo chế độ mới...</p>
+            </div>
+
             <div id="study-modal-concepts-list" class="space-y-3">
               <!-- Rendered via JS -->
             </div>

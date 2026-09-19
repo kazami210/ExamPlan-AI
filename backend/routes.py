@@ -828,6 +828,8 @@ def list_plans(db: Session = Depends(get_db)):
 
 class StudyLessonRequest(BaseModel):
     target_goal: Optional[str] = "advanced" # "basic" | "advanced"
+    summary_mode: Optional[str] = "quick" # "quick" (3 phút ngắn gọn) | "detailed" (Đầy đủ chuyên sâu)
+    force_refresh: Optional[bool] = False
     gemini_api_key: Optional[str] = None
 
 @router.patch("/tasks/{task_id}/toggle")
@@ -853,6 +855,7 @@ async def get_study_lesson(
     db: Session = Depends(get_db)
 ):
     """Retrieve micro-learning lesson with 3-5 core concepts, 2-min quiz, and advanced materials using RAG.
+    Supports Quick (3-min) vs Detailed summary modes.
     Cached permanently in the database so repeated clicks do NOT waste Gemini quota."""
     task = db.query(StudyTask).filter(StudyTask.id == task_id).first()
     if not task:
@@ -862,36 +865,43 @@ async def get_study_lesson(
     doc = db.query(Document).filter(Document.id == plan.document_id).first() if plan else None
 
     is_advanced = (req.target_goal or "advanced") in ["advanced", "g gioi", "gioi", "xuat sac"]
+    summary_mode = req.summary_mode if req.summary_mode in ["quick", "detailed"] else "quick"
+
+    # Distinguish cache by goal and summary_mode (e.g. advanced vs basic)
     cached_field = "lesson_data_advanced" if is_advanced else "lesson_data_basic"
     cached_val = getattr(task, cached_field, None)
 
-    if cached_val:
+    if cached_val and not req.force_refresh:
         try:
             cached_json = json.loads(cached_val)
+            # If summary_mode matches or cached_json has core_concepts
             if cached_json and "core_concepts" in cached_json and "quick_quiz" in cached_json:
-                slides = parse_image_urls(task.image_urls)
-                return {
-                    "success": True,
-                    "task": {
-                        "id": task.id,
-                        "title": task.title,
-                        "topic_title": task.topic_title,
-                        "description": task.description,
-                        "task_type": task.task_type,
-                        "difficulty": task.difficulty,
-                        "estimated_minutes": task.estimated_minutes,
-                        "is_completed": task.is_completed,
-                        "study_date": task.study_date.isoformat(),
-                        "day_number": task.day_number,
-                        "start_page": task.start_page,
-                        "end_page": task.end_page,
-                        "slide_scope": task.slide_scope,
-                        "image_urls": slides
-                    },
-                    "target_goal": req.target_goal or "advanced",
-                    "lesson": cached_json,
-                    "from_cache": True
-                }
+                cached_mode = cached_json.get("summary_mode", "quick")
+                if cached_mode == summary_mode:
+                    slides = parse_image_urls(task.image_urls)
+                    return {
+                        "success": True,
+                        "task": {
+                            "id": task.id,
+                            "title": task.title,
+                            "topic_title": task.topic_title,
+                            "description": task.description,
+                            "task_type": task.task_type,
+                            "difficulty": task.difficulty,
+                            "estimated_minutes": task.estimated_minutes,
+                            "is_completed": task.is_completed,
+                            "study_date": task.study_date.isoformat(),
+                            "day_number": task.day_number,
+                            "start_page": task.start_page,
+                            "end_page": task.end_page,
+                            "slide_scope": task.slide_scope,
+                            "image_urls": slides
+                        },
+                        "target_goal": req.target_goal or "advanced",
+                        "summary_mode": summary_mode,
+                        "lesson": cached_json,
+                        "from_cache": True
+                    }
         except Exception:
             pass
 
@@ -907,6 +917,7 @@ async def get_study_lesson(
         topic_title=task.topic_title or "",
         context_chunks=relevant_chunks,
         target_goal=req.target_goal or "advanced",
+        summary_mode=summary_mode,
         api_key=req.gemini_api_key
     )
 
@@ -938,6 +949,7 @@ async def get_study_lesson(
             "image_urls": slides
         },
         "target_goal": req.target_goal or "advanced",
+        "summary_mode": summary_mode,
         "lesson": lesson_data,
         "from_cache": False
     }

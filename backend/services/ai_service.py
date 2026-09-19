@@ -279,11 +279,22 @@ NGUYÊN TẮC BẮT BUỘC:
         topic_title: str,
         context_chunks: List[str],
         target_goal: str = "advanced",
+        summary_mode: str = "quick", # "quick" (3 phút ngắn gọn) | "detailed" (Đầy đủ chuyên sâu)
         api_key: Optional[str] = None
     ) -> Dict[str, Any]:
         """Generate 3-5 core concepts, 1 quick 2-minute quiz, and optional advanced materials."""
         context = "\n\n---\n\n".join(context_chunks[:4]) if context_chunks else ""
         is_advanced = target_goal in ["advanced", "g gioi", "gioi", "xuat sac"]
+        is_detailed = summary_mode == "detailed"
+
+        mode_instruction = (
+            "CHẾ ĐỘ TÓM TẮT: ĐẦY ĐỦ & CHUYÊN SÂU (Detailed Mode)\n"
+            "- Giải thích cặn kẽ bản chất vật lý/toán học/chuyên môn, chứng minh công thức ngắn gọn, điều kiện biên và các trường hợp ngoại lệ.\n"
+            "- Nêu rõ các dạng bài toán tự luận hoặc tính toán phức tạp hay gặp trong đề thi."
+            if is_detailed else
+            "CHẾ ĐỘ TÓM TẮT: CÔ ĐỌNG 3 PHÚT (Quick Mode)\n"
+            "- Tập trung tối đa vào công thức chốt hạ, định nghĩa 1-2 câu súc tích nhất, điều kiện tiên quyết cần nhớ ngay trước giờ thi."
+        )
 
         prompt = f"""
 Bạn là chuyên gia giảng dạy đại học hàng đầu về môn học này. Hãy trích xuất và giảng giải KIẾN THỨC CHUYÊN MÔN CỤ THỂ, TRỰC DIỆN từ tài liệu đề cương cho bài học sau:
@@ -291,6 +302,7 @@ Bạn là chuyên gia giảng dạy đại học hàng đầu về môn học n�
 TÊN BÀI HỌC: {task_title}
 CHỦ ĐỀ CHÍNH: {topic_title or task_title}
 MỤC TIÊU: {'Nâng cao / Điểm giỏi (8.5 - 10.0)' if is_advanced else 'Cơ bản / Pass môn (5.0 - 7.0)'}
+{mode_instruction}
 
 NỘI DUNG TÀI LIỆU TRÍCH XUẤT TỪ ĐỀ CƯƠNG:
 \"\"\"
@@ -310,6 +322,7 @@ NGUYÊN TẮC BẮT BUỘC VỀ NỘI DUNG (VI PHẠM LÀ THẤT BẠI):
 YÊU CẦU ĐẦU RA (CHỈ TRẢ VỀ JSON HỢP LỆ, KHÔNG KÈM VĂN BẢN NGOÀI):
 {{
   "task_title": "{task_title}",
+  "summary_mode": "{summary_mode}",
   "core_concepts": [
     {{
       "title": "Tên khái niệm / Định luật / Công thức cụ thể",

@@ -16,8 +16,9 @@ const state = {
   currentUser: null,
   authToken: localStorage.getItem("examplan_auth_token") || "",
   targetGoal: "advanced", // "basic" (Pass môn) | "advanced" (Điểm giỏi)
+  summaryMode: "quick", // "quick" (3 phút ngắn gọn) | "detailed" (Chi tiết chuyên sâu)
   activeStudyTask: null,
-  studyLessonCache: {}, // taskId_goal -> lessonData
+  studyLessonCache: {}, // taskId_goal_mode -> lessonData
   activeSlideIndex: 0,
   activeSlideImages: [],
   slideViewMode: "carousel" // "carousel" | "scroll"
@@ -27,6 +28,12 @@ const state = {
 // Target Goal Filter DOM elements
 const goalFilterBasic = document.getElementById("goal-filter-basic");
 const goalFilterAdvanced = document.getElementById("goal-filter-advanced");
+
+// Summary Mode DOM elements
+const btnSummaryModeQuick = document.getElementById("btn-summary-mode-quick");
+const btnSummaryModeDetailed = document.getElementById("btn-summary-mode-detailed");
+const btnRefreshStudyLesson = document.getElementById("btn-refresh-study-lesson");
+const studyConceptsLoading = document.getElementById("study-concepts-loading");
 
 // Study Modal DOM elements
 const studyModal = document.getElementById("study-modal");
@@ -1651,6 +1658,30 @@ window.handleTaskItemClick = function(event, taskId) {
   openStudyModal(taskId);
 };
 
+window.setSummaryMode = function(mode) {
+  if (state.summaryMode === mode) return;
+  state.summaryMode = mode;
+
+  if (mode === "quick") {
+    if (btnSummaryModeQuick) btnSummaryModeQuick.className = "px-2.5 py-1 rounded-md text-[11px] font-bold transition bg-indigo-600 text-white shadow-xs cursor-pointer flex items-center gap-1";
+    if (btnSummaryModeDetailed) btnSummaryModeDetailed.className = "px-2.5 py-1 rounded-md text-[11px] font-semibold transition text-slate-600 hover:text-slate-900 cursor-pointer flex items-center gap-1";
+  } else {
+    if (btnSummaryModeDetailed) btnSummaryModeDetailed.className = "px-2.5 py-1 rounded-md text-[11px] font-bold transition bg-indigo-600 text-white shadow-xs cursor-pointer flex items-center gap-1";
+    if (btnSummaryModeQuick) btnSummaryModeQuick.className = "px-2.5 py-1 rounded-md text-[11px] font-semibold transition text-slate-600 hover:text-slate-900 cursor-pointer flex items-center gap-1";
+  }
+
+  // If Study Modal is open, fetch or load the lesson for this summary mode
+  if (studyModal && !studyModal.classList.contains("hidden") && state.activeStudyTask) {
+    loadStudyLesson(state.activeStudyTask.id, false);
+  }
+};
+
+window.refreshStudyLesson = function() {
+  if (state.activeStudyTask) {
+    loadStudyLesson(state.activeStudyTask.id, true);
+  }
+};
+
 window.setTargetGoal = function(goal) {
   state.targetGoal = goal;
   if (goal === "basic") {
@@ -1663,7 +1694,7 @@ window.setTargetGoal = function(goal) {
 
   // If Study Modal is currently open, refresh the lesson view for the new goal
   if (studyModal && !studyModal.classList.contains("hidden") && state.activeStudyTask) {
-    openStudyModal(state.activeStudyTask.id, true);
+    loadStudyLesson(state.activeStudyTask.id, false);
   }
 };
 
@@ -1679,6 +1710,15 @@ window.openStudyModal = async function(taskId, forceRefresh = false) {
 
   // Always reset to Tab 1 (Lesson & Quiz) when opening
   switchStudyModalTab("lesson");
+
+  // Sync mode buttons
+  if (state.summaryMode === "quick") {
+    if (btnSummaryModeQuick) btnSummaryModeQuick.className = "px-2.5 py-1 rounded-md text-[11px] font-bold transition bg-indigo-600 text-white shadow-xs cursor-pointer flex items-center gap-1";
+    if (btnSummaryModeDetailed) btnSummaryModeDetailed.className = "px-2.5 py-1 rounded-md text-[11px] font-semibold transition text-slate-600 hover:text-slate-900 cursor-pointer flex items-center gap-1";
+  } else {
+    if (btnSummaryModeDetailed) btnSummaryModeDetailed.className = "px-2.5 py-1 rounded-md text-[11px] font-bold transition bg-indigo-600 text-white shadow-xs cursor-pointer flex items-center gap-1";
+    if (btnSummaryModeQuick) btnSummaryModeQuick.className = "px-2.5 py-1 rounded-md text-[11px] font-semibold transition text-slate-600 hover:text-slate-900 cursor-pointer flex items-center gap-1";
+  }
 
   // Clear previous Q&A thread for this fresh modal session
   if (studyQaMessages) studyQaMessages.innerHTML = "";
@@ -1716,19 +1756,42 @@ window.openStudyModal = async function(taskId, forceRefresh = false) {
   // Render slides immediately from task data with scoped range
   renderTaskSlides(task.image_urls || [], task.slide_scope);
 
-  // Check in-memory cache for this task + targetGoal
-  const cacheKey = `${taskId}_${state.targetGoal}`;
+  // Fetch or retrieve from cache
+  await loadStudyLesson(taskId, forceRefresh);
+};
+
+async function loadStudyLesson(taskId, forceRefresh = false) {
+  const task = state.activeStudyTask || state.currentPlanData?.tasks?.find((t) => String(t.id) === String(taskId));
+  if (!task) return;
+
+  const summaryMode = state.summaryMode || "quick";
+  const targetGoal = state.targetGoal || "advanced";
+  const cacheKey = `${taskId}_${targetGoal}_${summaryMode}`;
+
+  // Check in-memory cache
   if (!forceRefresh && state.studyLessonCache[cacheKey]) {
-    studyModalLoading.classList.add("hidden");
-    studyModalBody.classList.remove("hidden");
+    if (studyModalLoading) studyModalLoading.classList.add("hidden");
+    if (studyConceptsLoading) studyConceptsLoading.classList.add("hidden");
+    if (studyModalConceptsList) studyModalConceptsList.classList.remove("hidden");
+    if (studyModalBody) studyModalBody.classList.remove("hidden");
     renderStudyLessonContent(state.studyLessonCache[cacheKey]);
     lucide.createIcons();
     return;
   }
 
-  // Show Loading & Fetch from RAG Endpoint
-  studyModalLoading.classList.remove("hidden");
-  studyModalBody.classList.add("hidden");
+  // If modal body is already visible (switching mode), use in-card spinner
+  const isBodyVisible = studyModalBody && !studyModalBody.classList.contains("hidden");
+  if (isBodyVisible) {
+    if (studyConceptsLoading) studyConceptsLoading.classList.remove("hidden");
+    if (studyModalConceptsList) studyModalConceptsList.classList.add("hidden");
+  } else {
+    if (studyModalLoading) studyModalLoading.classList.remove("hidden");
+    if (studyModalBody) studyModalBody.classList.add("hidden");
+  }
+
+  if (btnRefreshStudyLesson) {
+    btnRefreshStudyLesson.classList.add("animate-spin", "text-indigo-600");
+  }
   lucide.createIcons();
 
   try {
@@ -1736,7 +1799,9 @@ window.openStudyModal = async function(taskId, forceRefresh = false) {
       method: "POST",
       headers: { "Content-Type": "application/json", ...getAuthHeaders() },
       body: JSON.stringify({
-        target_goal: state.targetGoal || "advanced",
+        target_goal: targetGoal,
+        summary_mode: summaryMode,
+        force_refresh: forceRefresh,
         gemini_api_key: state.geminiApiKey || null
       })
     });
@@ -1757,19 +1822,30 @@ window.openStudyModal = async function(taskId, forceRefresh = false) {
       renderTaskSlides(data.task.image_urls, data.task.slide_scope);
     }
 
-    studyModalLoading.classList.add("hidden");
-    studyModalBody.classList.remove("hidden");
+    if (studyModalLoading) studyModalLoading.classList.add("hidden");
+    if (studyConceptsLoading) studyConceptsLoading.classList.add("hidden");
+    if (studyModalConceptsList) studyModalConceptsList.classList.remove("hidden");
+    if (studyModalBody) studyModalBody.classList.remove("hidden");
     renderStudyLessonContent(data.lesson);
   } catch (err) {
-    studyModalLoading.innerHTML = `
-      <div class="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-rose-700 text-xs">
-        <p class="font-bold">Lỗi tải kiến thức bài học: ${err.message}</p>
-        <button onclick="openStudyModal(${taskId}, true)" class="mt-2 px-3 py-1 bg-rose-600 text-white rounded-lg font-bold">Thử lại</button>
-      </div>
-    `;
+    if (studyModalLoading) {
+      studyModalLoading.classList.remove("hidden");
+      studyModalLoading.innerHTML = `
+        <div class="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-rose-700 text-xs">
+          <p class="font-bold">Lỗi tải kiến thức bài học: ${err.message}</p>
+          <button onclick="loadStudyLesson(${taskId}, true)" class="mt-2 px-3 py-1 bg-rose-600 text-white rounded-lg font-bold">Thử lại</button>
+        </div>
+      `;
+    }
+    if (studyConceptsLoading) studyConceptsLoading.classList.add("hidden");
+    if (studyModalConceptsList) studyModalConceptsList.classList.remove("hidden");
+  } finally {
+    if (btnRefreshStudyLesson) {
+      btnRefreshStudyLesson.classList.remove("animate-spin", "text-indigo-600");
+    }
+    lucide.createIcons();
   }
-  lucide.createIcons();
-};
+}
 
 function updateStudyModalDoneButton(isCompleted) {
   if (!btnStudyModalToggleDone) return;
