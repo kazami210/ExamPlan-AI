@@ -64,6 +64,25 @@ def migrate_guest_data(guest_token: str, real_user: User, db: Session):
         guest.session_token = f"migrated_{guest.id}_{secrets.token_hex(4)}"
         db.commit()
 
+def parse_image_urls(val) -> List[str]:
+    """Safely parse image_urls stored as JSON or string list."""
+    if not val:
+        return []
+    if isinstance(val, list):
+        return [str(x) for x in val if x]
+    try:
+        parsed = json.loads(val)
+        if isinstance(parsed, list):
+            return [str(x) for x in parsed if x]
+    except Exception:
+        pass
+    cleaned = []
+    for item in str(val).replace("\r", "").replace(",", "\n").split("\n"):
+        item_str = item.strip()
+        if item_str:
+            cleaned.append(item_str)
+    return cleaned
+
 # --- Auth Endpoints ---
 
 @router.get("/config")
@@ -486,7 +505,25 @@ async def generate_plan(req: PlanGenerateRequest, authorization: Optional[str] =
     db.commit()
     db.refresh(plan)
 
-    for t in raw_tasks:
+    # Sample slide paths for demonstration courses if relevant
+    sample_slides = [
+        "/uploads/slides/slide_triet_hoc_1.svg",
+        "/uploads/slides/slide_triet_hoc_2.svg",
+        "/uploads/slides/slide_triet_hoc_3.svg"
+    ]
+    is_sample_subject = any(w in (doc.subject_name or "").lower() for w in ["triết", "mác", "lênin", "vật lý", "đại cương"])
+
+    for idx, t in enumerate(raw_tasks):
+        # Auto-attach sample slides to the first few tasks for demonstration if applicable
+        task_images = t.get("image_urls")
+        if not task_images and is_sample_subject:
+            if idx == 0:
+                task_images = sample_slides[:2]
+            elif idx == 1:
+                task_images = [sample_slides[1], sample_slides[2]]
+            elif idx == 2:
+                task_images = [sample_slides[2]]
+        
         task = StudyTask(
             plan_id=plan.id,
             study_date=t["study_date"],
@@ -498,7 +535,8 @@ async def generate_plan(req: PlanGenerateRequest, authorization: Optional[str] =
             difficulty=t.get("difficulty", "Trung bình"),
             estimated_minutes=t.get("estimated_minutes", 60),
             is_completed=False,
-            order_index=t.get("order_index", 1)
+            order_index=t.get("order_index", 1),
+            image_urls=json.dumps(task_images, ensure_ascii=False) if task_images else None
         )
         db.add(task)
     db.commit()
@@ -542,7 +580,8 @@ def get_plan_details_internal(plan_id: int, db: Session):
                 "difficulty": t.difficulty,
                 "estimated_minutes": t.estimated_minutes,
                 "is_completed": t.is_completed,
-                "order_index": t.order_index
+                "order_index": t.order_index,
+                "image_urls": parse_image_urls(t.image_urls)
             }
             for t in tasks
         ]
@@ -623,6 +662,7 @@ async def get_study_lesson(
                         "is_completed": task.is_completed,
                         "study_date": task.study_date.isoformat(),
                         "day_number": task.day_number,
+                        "image_urls": parse_image_urls(task.image_urls)
                     },
                     "target_goal": req.target_goal or "advanced",
                     "lesson": cached_json,
@@ -666,11 +706,52 @@ async def get_study_lesson(
             "is_completed": task.is_completed,
             "study_date": task.study_date.isoformat(),
             "day_number": task.day_number,
+            "image_urls": parse_image_urls(task.image_urls)
         },
         "target_goal": req.target_goal or "advanced",
         "lesson": lesson_data,
         "from_cache": False
     }
+
+class TaskImagesRequest(BaseModel):
+    image_urls: List[str]
+
+@router.post("/tasks/{task_id}/images")
+def update_task_images(task_id: int, req: TaskImagesRequest, db: Session = Depends(get_db)):
+    """Update slide/image URLs attached to a task."""
+    task = db.query(StudyTask).filter(StudyTask.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Không tìm thấy nhiệm vụ.")
+    task.image_urls = json.dumps(req.image_urls, ensure_ascii=False)
+    db.commit()
+    return {"success": True, "task_id": task.id, "image_urls": req.image_urls}
+
+@router.post("/tasks/{task_id}/upload-images")
+async def upload_task_images(
+    task_id: int,
+    files: List[UploadFile] = File(...),
+    db: Session = Depends(get_db)
+):
+    """Directly upload slide/diagram image files for a lesson task and serve statically."""
+    task = db.query(StudyTask).filter(StudyTask.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Không tìm thấy nhiệm vụ.")
+
+    slides_dir = UPLOAD_DIR / "slides"
+    slides_dir.mkdir(parents=True, exist_ok=True)
+
+    current_images = parse_image_urls(task.image_urls)
+    for f in files:
+        safe_name = f"task_{task_id}_{int(datetime.utcnow().timestamp())}_{secrets.token_hex(3)}_{Path(f.filename).name}"
+        dest = slides_dir / safe_name
+        content = await f.read()
+        with open(dest, "wb") as buffer:
+            buffer.write(content)
+        current_images.append(f"/uploads/slides/{safe_name}")
+
+    task.image_urls = json.dumps(current_images, ensure_ascii=False)
+    db.commit()
+    return {"success": True, "task_id": task.id, "image_urls": current_images}
 
 @router.post("/tasks/{task_id}/ask")
 async def ask_task_question(

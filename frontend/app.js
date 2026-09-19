@@ -17,7 +17,10 @@ const state = {
   authToken: localStorage.getItem("examplan_auth_token") || "",
   targetGoal: "advanced", // "basic" (Pass môn) | "advanced" (Điểm giỏi)
   activeStudyTask: null,
-  studyLessonCache: {} // taskId_goal -> lessonData
+  studyLessonCache: {}, // taskId_goal -> lessonData
+  activeSlideIndex: 0,
+  activeSlideImages: [],
+  slideViewMode: "carousel" // "carousel" | "scroll"
 };
 
 // --- DOM Elements ---
@@ -43,6 +46,23 @@ const studyQuizOptions = document.getElementById("study-quiz-options");
 const studyQuizFeedback = document.getElementById("study-quiz-feedback");
 const studyModalAdvancedSection = document.getElementById("study-modal-advanced-section");
 const studyModalAdvancedList = document.getElementById("study-modal-advanced-list");
+
+// Slide Viewer DOM elements
+const studyModalSlidesSection = document.getElementById("study-modal-slides-section");
+const studySlideCountBadge = document.getElementById("study-slide-count-badge");
+const btnSlideModeCarousel = document.getElementById("btn-slide-mode-carousel");
+const btnSlideModeScroll = document.getElementById("btn-slide-mode-scroll");
+const inputUploadTaskSlide = document.getElementById("input-upload-task-slide");
+const inputUploadTaskSlideEmpty = document.getElementById("input-upload-task-slide-empty");
+const studySlideCarouselContainer = document.getElementById("study-slide-carousel-container");
+const studySlideCarouselImg = document.getElementById("study-slide-carousel-img");
+const btnSlidePrev = document.getElementById("btn-slide-prev");
+const btnSlideNext = document.getElementById("btn-slide-next");
+const studySlidePageIndicator = document.getElementById("study-slide-page-indicator");
+const studySlideDots = document.getElementById("study-slide-dots");
+const btnSlideFullscreen = document.getElementById("btn-slide-fullscreen");
+const studySlideScrollContainer = document.getElementById("study-slide-scroll-container");
+const studySlideEmptyState = document.getElementById("study-slide-empty-state");
 
 // Study Modal Tabs & In-Modal Q&A DOM elements
 const tabStudyLessonBtn = document.getElementById("tab-study-lesson-btn");
@@ -285,6 +305,14 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   });
+
+  // Slide Viewer Listeners
+  if (btnSlidePrev) btnSlidePrev.addEventListener("click", prevSlide);
+  if (btnSlideNext) btnSlideNext.addEventListener("click", nextSlide);
+  if (btnSlideModeCarousel) btnSlideModeCarousel.addEventListener("click", () => switchSlideMode("carousel"));
+  if (btnSlideModeScroll) btnSlideModeScroll.addEventListener("click", () => switchSlideMode("scroll"));
+  if (inputUploadTaskSlide) inputUploadTaskSlide.addEventListener("change", (e) => handleSlideUpload(e.target.files));
+  if (inputUploadTaskSlideEmpty) inputUploadTaskSlideEmpty.addEventListener("change", (e) => handleSlideUpload(e.target.files));
 
   // Set default exam date to +14 days
   const defaultDate = new Date();
@@ -1690,6 +1718,9 @@ window.openStudyModal = async function(taskId, forceRefresh = false) {
 
   updateStudyModalDoneButton(task.is_completed);
 
+  // Render slides immediately from task data
+  renderTaskSlides(task.image_urls || []);
+
   // Check in-memory cache for this task + targetGoal
   const cacheKey = `${taskId}_${state.targetGoal}`;
   if (!forceRefresh && state.studyLessonCache[cacheKey]) {
@@ -1723,6 +1754,11 @@ window.openStudyModal = async function(taskId, forceRefresh = false) {
     const data = await res.json();
     state.studyLessonCache[cacheKey] = data.lesson;
 
+    if (data.task && data.task.image_urls) {
+      task.image_urls = data.task.image_urls;
+      renderTaskSlides(data.task.image_urls);
+    }
+
     studyModalLoading.classList.add("hidden");
     studyModalBody.classList.remove("hidden");
     renderStudyLessonContent(data.lesson);
@@ -1747,6 +1783,154 @@ function updateStudyModalDoneButton(isCompleted) {
     btnStudyModalToggleDone.innerHTML = `<i data-lucide="check" class="w-4 h-4"></i> <span>Đánh dấu đã học xong</span>`;
   }
   lucide.createIcons();
+}
+
+// --- Study Slide Viewer Logic ---
+
+function renderTaskSlides(images) {
+  state.activeSlideImages = Array.isArray(images) ? images : [];
+  const total = state.activeSlideImages.length;
+
+  if (studySlideCountBadge) {
+    studySlideCountBadge.textContent = `${total} Slide`;
+  }
+
+  if (total === 0) {
+    if (studySlideCarouselContainer) studySlideCarouselContainer.classList.add("hidden");
+    if (studySlideScrollContainer) studySlideScrollContainer.classList.add("hidden");
+    if (studySlideEmptyState) studySlideEmptyState.classList.remove("hidden");
+    if (btnSlideModeCarousel) btnSlideModeCarousel.classList.add("hidden");
+    if (btnSlideModeScroll) btnSlideModeScroll.classList.add("hidden");
+    return;
+  }
+
+  // When slides are present
+  if (studySlideEmptyState) studySlideEmptyState.classList.add("hidden");
+  if (btnSlideModeCarousel) btnSlideModeCarousel.classList.remove("hidden");
+  if (btnSlideModeScroll) btnSlideModeScroll.classList.remove("hidden");
+
+  // Ensure active index is within bounds
+  if (state.activeSlideIndex < 0 || state.activeSlideIndex >= total) {
+    state.activeSlideIndex = 0;
+  }
+
+  if (state.slideViewMode === "carousel") {
+    if (studySlideCarouselContainer) studySlideCarouselContainer.classList.remove("hidden");
+    if (studySlideScrollContainer) studySlideScrollContainer.classList.add("hidden");
+
+    if (btnSlideModeCarousel) {
+      btnSlideModeCarousel.className = "px-2.5 py-1 rounded-lg text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 transition cursor-pointer";
+    }
+    if (btnSlideModeScroll) {
+      btnSlideModeScroll.className = "px-2.5 py-1 rounded-lg text-[11px] font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer";
+    }
+
+    const currentUrl = state.activeSlideImages[state.activeSlideIndex];
+    if (studySlideCarouselImg) {
+      studySlideCarouselImg.src = currentUrl;
+    }
+    if (studySlidePageIndicator) {
+      studySlidePageIndicator.textContent = `Trang ${state.activeSlideIndex + 1} / ${total}`;
+    }
+    if (btnSlideFullscreen) {
+      btnSlideFullscreen.href = currentUrl;
+    }
+
+    if (studySlideDots) {
+      studySlideDots.innerHTML = state.activeSlideImages.map((_, idx) => `
+        <button type="button" onclick="setSlideIndex(${idx})" class="w-2 h-2 rounded-full transition-all cursor-pointer ${
+          idx === state.activeSlideIndex ? "bg-indigo-400 w-5" : "bg-slate-600 hover:bg-slate-400"
+        }" title="Chuyển đến trang ${idx + 1}"></button>
+      `).join("");
+    }
+
+    if (btnSlidePrev) btnSlidePrev.style.display = total <= 1 ? "none" : "flex";
+    if (btnSlideNext) btnSlideNext.style.display = total <= 1 ? "none" : "flex";
+  } else {
+    // Vertical scroll mode
+    if (studySlideCarouselContainer) studySlideCarouselContainer.classList.add("hidden");
+    if (studySlideScrollContainer) studySlideScrollContainer.classList.remove("hidden");
+
+    if (btnSlideModeScroll) {
+      btnSlideModeScroll.className = "px-2.5 py-1 rounded-lg text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 transition cursor-pointer";
+    }
+    if (btnSlideModeCarousel) {
+      btnSlideModeCarousel.className = "px-2.5 py-1 rounded-lg text-[11px] font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer";
+    }
+
+    if (studySlideScrollContainer) {
+      studySlideScrollContainer.innerHTML = state.activeSlideImages.map((url, idx) => `
+        <div class="bg-slate-950 rounded-2xl p-3 sm:p-4 border border-slate-800 shadow-md space-y-2">
+          <div class="flex items-center justify-between text-xs text-slate-300 px-1">
+            <span class="font-bold text-indigo-400">Slide ${idx + 1} / ${total}</span>
+            <a href="${url}" target="_blank" class="text-[11px] text-slate-400 hover:text-white flex items-center gap-1">
+              <i data-lucide="external-link" class="w-3 h-3"></i> Xem ảnh gốc
+            </a>
+          </div>
+          <div class="w-full flex items-center justify-center overflow-hidden min-h-[160px] max-h-[460px]">
+            <img src="${url}" alt="Slide ${idx + 1}" class="max-h-[440px] max-w-full w-auto object-contain mx-auto rounded-xl shadow-lg">
+          </div>
+        </div>
+      `).join("");
+    }
+  }
+  lucide.createIcons();
+}
+
+window.setSlideIndex = function(idx) {
+  const total = state.activeSlideImages.length;
+  if (total === 0) return;
+  state.activeSlideIndex = (idx + total) % total;
+  renderTaskSlides(state.activeSlideImages);
+};
+
+window.nextSlide = function() {
+  setSlideIndex(state.activeSlideIndex + 1);
+};
+
+window.prevSlide = function() {
+  setSlideIndex(state.activeSlideIndex - 1);
+};
+
+window.switchSlideMode = function(mode) {
+  state.slideViewMode = mode;
+  renderTaskSlides(state.activeSlideImages);
+};
+
+async function handleSlideUpload(fileList) {
+  if (!fileList || fileList.length === 0) return;
+  if (!state.activeStudyTask) {
+    alert("Vui lòng mở một bài học trước khi tải ảnh slide!");
+    return;
+  }
+
+  const formData = new FormData();
+  Array.from(fileList).forEach((f) => formData.append("files", f));
+
+  try {
+    const res = await fetch(`/api/tasks/${state.activeStudyTask.id}/upload-images`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: formData
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || "Không thể tải ảnh lên.");
+    }
+    const data = await res.json();
+    state.activeStudyTask.image_urls = data.image_urls;
+    
+    // Also update in currentPlanData.tasks
+    if (state.currentPlanData && state.currentPlanData.tasks) {
+      const found = state.currentPlanData.tasks.find((t) => String(t.id) === String(state.activeStudyTask.id));
+      if (found) found.image_urls = data.image_urls;
+    }
+
+    renderTaskSlides(data.image_urls);
+    alert("✨ Đã tải lên ảnh bài giảng thành công!");
+  } catch (err) {
+    alert("Lỗi tải ảnh: " + err.message);
+  }
 }
 
 function renderStudyLessonContent(lesson) {

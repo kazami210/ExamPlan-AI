@@ -95,6 +95,7 @@ class StudyTask(Base):
     # Cached AI-generated lesson & quiz data (JSON string) to avoid redundant Gemini API calls
     lesson_data_basic = Column(Text, nullable=True)
     lesson_data_advanced = Column(Text, nullable=True)
+    image_urls = Column(Text, nullable=True) # JSON list of image/slide URLs or paths
 
     plan = relationship("StudyPlan", back_populates="tasks")
 
@@ -112,7 +113,7 @@ def init_db():
     # Safe auto-migration for existing SQLite / Postgres tables
     try:
         with engine.connect() as conn:
-            for col in ["lesson_data_basic", "lesson_data_advanced"]:
+            for col in ["lesson_data_basic", "lesson_data_advanced", "image_urls"]:
                 try:
                     conn.execute(text(f"ALTER TABLE study_tasks ADD COLUMN {col} TEXT;"))
                     conn.commit()

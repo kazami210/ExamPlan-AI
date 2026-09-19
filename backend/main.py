@@ -42,7 +42,9 @@ def on_startup():
 # Register API Router
 app.include_router(api_router)
 
-# Mount Frontend static files
+# Mount Static directories
+from backend.config import UPLOAD_DIR
+
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
 @app.get("/")
@@ -57,6 +59,9 @@ def serve_index():
 
 if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
+
+if UPLOAD_DIR.exists():
+    app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
 if __name__ == "__main__":
     import uvicorn
