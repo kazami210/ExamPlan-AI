@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#111827"/>
+      <stop offset="100%" stop-color="#1f2937"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="540" fill="url(#bg3)"/>
+  
+  <!-- Header -->
+  <rect x="40" y="30" width="170" height="32" rx="16" fill="#e11d48"/>
+  <text x="125" y="51" fill="#ffffff" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">SLIDE 03 / BÀI GIẢNG</text>
+  <text x="40" y="105" fill="#ffffff" font-family="system-ui, sans-serif" font-size="28" font-weight="900">QUY LUẬT THỐNG NHẤT &amp; ĐẤU TRANH MẶT ĐỐI LẬP</text>
+  <text x="40" y="135" fill="#9ca3af" font-family="system-ui, sans-serif" font-size="15">Hạt nhân của phép biện chứng duy vật - Nguồn gốc động lực của sự phát triển</text>
+
+  <!-- Side 1: Mặt đối lập A -->
+  <rect x="70" y="180" width="340" height="220" rx="16" fill="#1e3a8a" fill-opacity="0.4" stroke="#3b82f6" stroke-width="2"/>
+  <text x="240" y="225" fill="#60a5fa" font-family="system-ui, sans-serif" font-size="20" font-weight="bold" text-anchor="middle">MẶT ĐỐI LẬP A</text>
+  <text x="240" y="260" fill="#e2e8f0" font-family="system-ui, sans-serif" font-size="13" text-anchor="middle">Thuộc tính, khuynh hướng vận động</text>
+  <text x="240" y="285" fill="#e2e8f0" font-family="system-ui, sans-serif" font-size="13" text-anchor="middle">trái ngược với Mặt đối lập B</text>
+  <rect x="110" y="320" width="260" height="45" rx="8" fill="#1d4ed8"/>
+  <text x="240" y="348" fill="#ffffff" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">Ví dụ: Hấp thu / Đồng hóa</text>
+
+  <!-- Center: Interaction -->
+  <circle cx="480" cy="290" r="45" fill="#e11d48"/>
+  <text x="480" y="285" fill="#ffffff" font-family="system-ui, sans-serif" font-size="16" font-weight="900" text-anchor="middle">MÂU</text>
+  <text x="480" y="305" fill="#ffffff" font-family="system-ui, sans-serif" font-size="16" font-weight="900" text-anchor="middle">THUẪN</text>
+
+  <!-- Side 2: Mặt đối lập B -->
+  <rect x="550" y="180" width="340" height="220" rx="16" fill="#831843" fill-opacity="0.4" stroke="#ec4899" stroke-width="2"/>
+  <text x="720" y="225" fill="#f472b6" font-family="system-ui, sans-serif" font-size="20" font-weight="bold" text-anchor="middle">MẶT ĐỐI LẬP B</text>
+  <text x="720" y="260" fill="#e2e8f0" font-family="system-ui, sans-serif" font-size="13" text-anchor="middle">Tồn tại trong cùng một thể thống nhất,</text>
+  <text x="720" y="285" fill="#e2e8f0" font-family="system-ui, sans-serif" font-size="13" text-anchor="middle">vừa nương tựa vừa bài trừ nhau</text>
+  <rect x="590" y="320" width="260" height="45" rx="8" fill="#be185d"/>
+  <text x="720" y="348" fill="#ffffff" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">Ví dụ: Bài tiết / Dị hóa</text>
+
+  <!-- Bottom conclusion bar -->
+  <rect x="70" y="430" width="820" height="65" rx="14" fill="#374151" stroke="#4b5563" stroke-width="1.5"/>
+  <text x="480" y="458" fill="#fbbf24" font-family="system-ui, sans-serif" font-size="14" font-weight="bold" text-anchor="middle">⚡ THỐNG NHẤT LÀ TƯƠNG ĐỐI, TẠM THỜI — ĐẤU TRANH LÀ TUYỆT ĐỐI, VĨNH VIỄN</text>
+  <text x="480" y="480" fill="#d1d5db" font-family="system-ui, sans-serif" font-size="12" text-anchor="middle">Sự đấu tranh giữa các mặt đối lập giải quyết mâu thuẫn, thúc đẩy cái mới ra đời thay thế cái cũ.</text>
+</svg>
