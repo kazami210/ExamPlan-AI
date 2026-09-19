@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#701a75"/>
+      <stop offset="100%" stop-color="#1e1b4b"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="540" fill="url(#bg)"/>
+  
+  <rect x="40" y="30" width="200" height="32" rx="16" fill="#ffffff" fill-opacity="0.2"/>
+  <text x="140" y="51" fill="#ffffff" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">SLIDE 01 / 02 • CHƯƠNG 3</text>
+  <text x="40" y="105" fill="#ffffff" font-family="system-ui, sans-serif" font-size="26" font-weight="900">CHƯƠNG 3: CHỦ NGHĨA DUY VẬT LỊCH SỬ</text>
+  <text x="40" y="135" fill="#cbd5e1" font-family="system-ui, sans-serif" font-size="15">Hình thái kinh tế - xã hội và quy luật phát triển</text>
+
+  <rect x="40" y="165" width="880" height="330" rx="20" fill="#000000" fill-opacity="0.35" stroke="#ffffff" stroke-opacity="0.15" stroke-width="1.5"/>
+
+  <circle cx="75" cy="215" r="15" fill="#ffffff" fill-opacity="0.25"/>
+  <text x="75" y="220" fill="#ffffff" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">1</text>
+  <text x="105" y="210" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="16" font-weight="bold">Biện chứng giữa Lực lượng SX và Quan hệ SX</text>
+  <text x="105" y="237" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="14">LLSX quyết định QHSX; QHSX tác động trở lại phù hợp hoặc kìm hãm sự phát triển của LLSX.</text>
+
+  <circle cx="75" cy="303" r="15" fill="#ffffff" fill-opacity="0.25"/>
+  <text x="75" y="308" fill="#ffffff" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">2</text>
+  <text x="105" y="298" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="16" font-weight="bold">Cơ sở hạ tầng và Kiến trúc thượng tầng</text>
+  <text x="105" y="325" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="14">CSHT quyết định KTTT; KTTT (nhà nước, pháp luật, ý thức) bảo vệ và duy trì CSHT sinh ra nó.</text>
+
+  <circle cx="75" cy="391" r="15" fill="#ffffff" fill-opacity="0.25"/>
+  <text x="75" y="396" fill="#ffffff" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">3</text>
+  <text x="105" y="386" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="16" font-weight="bold">Hình thái kinh tế - xã hội</text>
+  <text x="105" y="413" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="14">Lịch sử xã hội loài người là quá trình lịch sử - tự nhiên của sự thay thế các hình thái kinh tế - xã hội.</text>
+</svg>

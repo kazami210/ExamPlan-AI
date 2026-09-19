@@ -83,6 +83,66 @@ def parse_image_urls(val) -> List[str]:
             cleaned.append(item_str)
     return cleaned
 
+def find_available_slides(task_title: str, topic_title: str = "", task_id: int = None) -> List[str]:
+    """
+    Automatically discovers and matches available slides from static repositories
+    (frontend/slides and data/uploads/slides) based on:
+    1. Chapter number extracted from task_title or topic_title (e.g. 'Chương 5' -> chuong_5_*.svg/jpg/png)
+    2. Task ID matching (e.g. task_{task_id}_*)
+    3. Topic keywords matching
+    """
+    import re
+    search_dirs = [
+        Path(__file__).resolve().parent.parent / "frontend" / "slides",
+        UPLOAD_DIR / "slides"
+    ]
+    
+    # Extract chapter number if present
+    full_text = f"{task_title} {topic_title}".lower()
+    ch_match = re.search(r"(?:chương|chuong|ch|bài|bai)\s*(\d+)", full_text)
+    ch_num = ch_match.group(1) if ch_match else None
+
+    discovered = []
+    seen_names = set()
+
+    for s_dir in search_dirs:
+        if not s_dir.exists():
+            continue
+        # 1. Look for chapter files if chapter number found (e.g. chuong_5_1.svg, chuong_5_2.jpg...)
+        if ch_num:
+            patterns = [
+                f"*chuong_{ch_num}_*.*",
+                f"*chuong{ch_num}_*.*",
+                f"*ch_{ch_num}_*.*",
+                f"*ch{ch_num}_*.*",
+                f"chuong_{ch_num}.*",
+                f"ch_{ch_num}.*"
+            ]
+            for pat in patterns:
+                for f in sorted(s_dir.glob(pat)):
+                    if f.suffix.lower() in [".svg", ".png", ".jpg", ".jpeg", ".webp"]:
+                        if f.name not in seen_names:
+                            seen_names.add(f.name)
+                            discovered.append(f"/static/slides/{f.name}")
+
+        # 2. Look for task id files (e.g. task_12_*.svg/jpg...)
+        if task_id:
+            for f in sorted(s_dir.glob(f"*task_{task_id}_*.*")):
+                if f.suffix.lower() in [".svg", ".png", ".jpg", ".jpeg", ".webp"]:
+                    if f.name not in seen_names:
+                        seen_names.add(f.name)
+                        discovered.append(f"/static/slides/{f.name}")
+
+    # Fallback to general slides if none found and it's a known philosophy / physics topic
+    if not discovered and ch_num:
+        alt_name = f"slide_triet_hoc_{ch_num}.svg"
+        for s_dir in search_dirs:
+            if (s_dir / alt_name).exists():
+                discovered.append(f"/static/slides/{alt_name}")
+                break
+
+    return discovered
+
 # --- Auth Endpoints ---
 
 @router.get("/config")
@@ -505,25 +565,12 @@ async def generate_plan(req: PlanGenerateRequest, authorization: Optional[str] =
     db.commit()
     db.refresh(plan)
 
-    # Sample slide paths for demonstration courses if relevant
-    sample_slides = [
-        "/uploads/slides/slide_triet_hoc_1.svg",
-        "/uploads/slides/slide_triet_hoc_2.svg",
-        "/uploads/slides/slide_triet_hoc_3.svg"
-    ]
-    is_sample_subject = any(w in (doc.subject_name or "").lower() for w in ["triết", "mác", "lênin", "vật lý", "đại cương"])
-
     for idx, t in enumerate(raw_tasks):
-        # Auto-attach sample slides to the first few tasks for demonstration if applicable
+        # Auto-attach matching slides by chapter or task
         task_images = t.get("image_urls")
-        if not task_images and is_sample_subject:
-            if idx == 0:
-                task_images = sample_slides[:2]
-            elif idx == 1:
-                task_images = [sample_slides[1], sample_slides[2]]
-            elif idx == 2:
-                task_images = [sample_slides[2]]
-        
+        if not task_images:
+            task_images = find_available_slides(t["title"], t.get("topic_title", ""), None)
+
         task = StudyTask(
             plan_id=plan.id,
             study_date=t["study_date"],
@@ -556,6 +603,26 @@ def get_plan_details_internal(plan_id: int, db: Session):
     today = date.today()
     days_left = max(0, (plan.exam_date - today).days)
 
+    task_dicts = []
+    for t in tasks:
+        slides = parse_image_urls(t.image_urls)
+        if not slides:
+            slides = find_available_slides(t.title, t.topic_title or "", t.id)
+        task_dicts.append({
+            "id": t.id,
+            "study_date": t.study_date.isoformat(),
+            "day_number": t.day_number,
+            "title": t.title,
+            "description": t.description,
+            "task_type": t.task_type,
+            "topic_title": t.topic_title,
+            "difficulty": t.difficulty,
+            "estimated_minutes": t.estimated_minutes,
+            "is_completed": t.is_completed,
+            "order_index": t.order_index,
+            "image_urls": slides
+        })
+
     return {
         "id": plan.id,
         "document_id": plan.document_id,
@@ -568,23 +635,7 @@ def get_plan_details_internal(plan_id: int, db: Session):
         "total_tasks": total_tasks,
         "completed_tasks": completed_tasks,
         "progress_percent": progress_pct,
-        "tasks": [
-            {
-                "id": t.id,
-                "study_date": t.study_date.isoformat(),
-                "day_number": t.day_number,
-                "title": t.title,
-                "description": t.description,
-                "task_type": t.task_type,
-                "topic_title": t.topic_title,
-                "difficulty": t.difficulty,
-                "estimated_minutes": t.estimated_minutes,
-                "is_completed": t.is_completed,
-                "order_index": t.order_index,
-                "image_urls": parse_image_urls(t.image_urls)
-            }
-            for t in tasks
-        ]
+        "tasks": task_dicts
     }
 
 @router.get("/plans/{plan_id}")
@@ -649,6 +700,16 @@ async def get_study_lesson(
         try:
             cached_json = json.loads(cached_val)
             if cached_json and "core_concepts" in cached_json and "quick_quiz" in cached_json:
+                # Ensure slides are auto-discovered from static library if image_urls is empty
+                slides = parse_image_urls(task.image_urls)
+                if not slides:
+                    slides = find_available_slides(task.title, task.topic_title or "", task.id)
+                    if slides:
+                        try:
+                            task.image_urls = json.dumps(slides, ensure_ascii=False)
+                            db.commit()
+                        except Exception:
+                            pass
                 return {
                     "success": True,
                     "task": {
@@ -662,7 +723,7 @@ async def get_study_lesson(
                         "is_completed": task.is_completed,
                         "study_date": task.study_date.isoformat(),
                         "day_number": task.day_number,
-                        "image_urls": parse_image_urls(task.image_urls)
+                        "image_urls": slides
                     },
                     "target_goal": req.target_goal or "advanced",
                     "lesson": cached_json,
@@ -686,6 +747,13 @@ async def get_study_lesson(
         api_key=req.gemini_api_key
     )
 
+    # Auto-discover slides if not already set
+    slides = parse_image_urls(task.image_urls)
+    if not slides:
+        slides = find_available_slides(task.title, task.topic_title or "", task.id)
+        if slides:
+            task.image_urls = json.dumps(slides, ensure_ascii=False)
+
     # Save to database cache
     try:
         setattr(task, cached_field, json.dumps(lesson_data, ensure_ascii=False))
@@ -706,7 +774,7 @@ async def get_study_lesson(
             "is_completed": task.is_completed,
             "study_date": task.study_date.isoformat(),
             "day_number": task.day_number,
-            "image_urls": parse_image_urls(task.image_urls)
+            "image_urls": slides
         },
         "target_goal": req.target_goal or "advanced",
         "lesson": lesson_data,

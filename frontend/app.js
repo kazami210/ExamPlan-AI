@@ -47,13 +47,11 @@ const studyQuizFeedback = document.getElementById("study-quiz-feedback");
 const studyModalAdvancedSection = document.getElementById("study-modal-advanced-section");
 const studyModalAdvancedList = document.getElementById("study-modal-advanced-list");
 
-// Slide Viewer DOM elements
+// Slide Viewer DOM elements (Auto-loaded from static library)
 const studyModalSlidesSection = document.getElementById("study-modal-slides-section");
 const studySlideCountBadge = document.getElementById("study-slide-count-badge");
 const btnSlideModeCarousel = document.getElementById("btn-slide-mode-carousel");
 const btnSlideModeScroll = document.getElementById("btn-slide-mode-scroll");
-const inputUploadTaskSlide = document.getElementById("input-upload-task-slide");
-const inputUploadTaskSlideEmpty = document.getElementById("input-upload-task-slide-empty");
 const studySlideCarouselContainer = document.getElementById("study-slide-carousel-container");
 const studySlideCarouselImg = document.getElementById("study-slide-carousel-img");
 const btnSlidePrev = document.getElementById("btn-slide-prev");
@@ -62,7 +60,6 @@ const studySlidePageIndicator = document.getElementById("study-slide-page-indica
 const studySlideDots = document.getElementById("study-slide-dots");
 const btnSlideFullscreen = document.getElementById("btn-slide-fullscreen");
 const studySlideScrollContainer = document.getElementById("study-slide-scroll-container");
-const studySlideEmptyState = document.getElementById("study-slide-empty-state");
 
 // Study Modal Tabs & In-Modal Q&A DOM elements
 const tabStudyLessonBtn = document.getElementById("tab-study-lesson-btn");
@@ -311,8 +308,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if (btnSlideNext) btnSlideNext.addEventListener("click", nextSlide);
   if (btnSlideModeCarousel) btnSlideModeCarousel.addEventListener("click", () => switchSlideMode("carousel"));
   if (btnSlideModeScroll) btnSlideModeScroll.addEventListener("click", () => switchSlideMode("scroll"));
-  if (inputUploadTaskSlide) inputUploadTaskSlide.addEventListener("change", (e) => handleSlideUpload(e.target.files));
-  if (inputUploadTaskSlideEmpty) inputUploadTaskSlideEmpty.addEventListener("change", (e) => handleSlideUpload(e.target.files));
 
   // Set default exam date to +14 days
   const defaultDate = new Date();
@@ -1795,19 +1790,16 @@ function renderTaskSlides(images) {
     studySlideCountBadge.textContent = `${total} Slide`;
   }
 
+  // If no slides for this chapter, completely hide the slides section
   if (total === 0) {
+    if (studyModalSlidesSection) studyModalSlidesSection.classList.add("hidden");
     if (studySlideCarouselContainer) studySlideCarouselContainer.classList.add("hidden");
     if (studySlideScrollContainer) studySlideScrollContainer.classList.add("hidden");
-    if (studySlideEmptyState) studySlideEmptyState.classList.remove("hidden");
-    if (btnSlideModeCarousel) btnSlideModeCarousel.classList.add("hidden");
-    if (btnSlideModeScroll) btnSlideModeScroll.classList.add("hidden");
     return;
   }
 
-  // When slides are present
-  if (studySlideEmptyState) studySlideEmptyState.classList.add("hidden");
-  if (btnSlideModeCarousel) btnSlideModeCarousel.classList.remove("hidden");
-  if (btnSlideModeScroll) btnSlideModeScroll.classList.remove("hidden");
+  // When slides are present, automatically show the section
+  if (studyModalSlidesSection) studyModalSlidesSection.classList.remove("hidden");
 
   // Ensure active index is within bounds
   if (state.activeSlideIndex < 0 || state.activeSlideIndex >= total) {
@@ -1896,42 +1888,6 @@ window.switchSlideMode = function(mode) {
   state.slideViewMode = mode;
   renderTaskSlides(state.activeSlideImages);
 };
-
-async function handleSlideUpload(fileList) {
-  if (!fileList || fileList.length === 0) return;
-  if (!state.activeStudyTask) {
-    alert("Vui lòng mở một bài học trước khi tải ảnh slide!");
-    return;
-  }
-
-  const formData = new FormData();
-  Array.from(fileList).forEach((f) => formData.append("files", f));
-
-  try {
-    const res = await fetch(`/api/tasks/${state.activeStudyTask.id}/upload-images`, {
-      method: "POST",
-      headers: getAuthHeaders(),
-      body: formData
-    });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.detail || "Không thể tải ảnh lên.");
-    }
-    const data = await res.json();
-    state.activeStudyTask.image_urls = data.image_urls;
-    
-    // Also update in currentPlanData.tasks
-    if (state.currentPlanData && state.currentPlanData.tasks) {
-      const found = state.currentPlanData.tasks.find((t) => String(t.id) === String(state.activeStudyTask.id));
-      if (found) found.image_urls = data.image_urls;
-    }
-
-    renderTaskSlides(data.image_urls);
-    alert("✨ Đã tải lên ảnh bài giảng thành công!");
-  } catch (err) {
-    alert("Lỗi tải ảnh: " + err.message);
-  }
-}
 
 function renderStudyLessonContent(lesson) {
   if (!lesson) return;

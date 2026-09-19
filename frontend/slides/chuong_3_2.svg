@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#701a75"/>
+      <stop offset="100%" stop-color="#4a044e"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="540" fill="url(#bg)"/>
+  
+  <rect x="40" y="30" width="200" height="32" rx="16" fill="#ffffff" fill-opacity="0.2"/>
+  <text x="140" y="51" fill="#ffffff" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">SLIDE 02 / 02 • CHƯƠNG 3</text>
+  <text x="40" y="105" fill="#ffffff" font-family="system-ui, sans-serif" font-size="26" font-weight="900">CHƯƠNG 3: GIAI CẤP, DÂN TỘC VÀ NHÀ NƯỚC</text>
+  <text x="40" y="135" fill="#cbd5e1" font-family="system-ui, sans-serif" font-size="15">Động lực phát triển của các xã hội có giai cấp</text>
+
+  <rect x="40" y="165" width="880" height="330" rx="20" fill="#000000" fill-opacity="0.35" stroke="#ffffff" stroke-opacity="0.15" stroke-width="1.5"/>
+
+  <circle cx="75" cy="215" r="15" fill="#ffffff" fill-opacity="0.25"/>
+  <text x="75" y="220" fill="#ffffff" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">1</text>
+  <text x="105" y="210" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="16" font-weight="bold">Đấu tranh giai cấp</text>
+  <text x="105" y="237" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="14">Là động lực trực tiếp của lịch sử trong các xã hội có đối kháng giai cấp.</text>
+
+  <circle cx="75" cy="303" r="15" fill="#ffffff" fill-opacity="0.25"/>
+  <text x="75" y="308" fill="#ffffff" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">2</text>
+  <text x="105" y="298" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="16" font-weight="bold">Nhà nước và Cách mạng xã hội</text>
+  <text x="105" y="325" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="14">Nhà nước là công cụ chuyên chính giai cấp; Cách mạng xã hội là bước chuyển biến vĩ đại giải phóng xã hội.</text>
+
+  <circle cx="75" cy="391" r="15" fill="#ffffff" fill-opacity="0.25"/>
+  <text x="75" y="396" fill="#ffffff" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">3</text>
+  <text x="105" y="386" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="16" font-weight="bold">Con người và Quần chúng nhân dân</text>
+  <text x="105" y="413" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="14">Bản chất con người là tổng hòa các quan hệ xã hội; Quần chúng nhân dân là người sáng tạo chân chính ra lịch sử.</text>
+</svg>
