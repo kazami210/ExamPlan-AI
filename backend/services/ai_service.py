@@ -175,15 +175,19 @@ Lưu ý:
                         est_h = 2.5
                         imp = 8.0
 
-                    extracted_topics.append({
-                        "code": f"CH{current_code_idx}",
-                        "title": f"{prefix.upper()}: {title}",
-                        "description": desc,
-                        "difficulty": diff,
-                        "estimated_hours": est_h,
-                        "importance_score": imp
-                    })
-                    current_code_idx += 1
+                    full_title = f"{prefix.upper()}: {title}".strip()
+                    # Deduplicate topics with same normalized title
+                    norm_title = re.sub(r"\s+", " ", full_title.lower())
+                    if not any(re.sub(r"\s+", " ", t["title"].lower()) == norm_title for t in extracted_topics):
+                        extracted_topics.append({
+                            "code": f"CH{current_code_idx}",
+                            "title": full_title,
+                            "description": desc,
+                            "difficulty": diff,
+                            "estimated_hours": est_h,
+                            "importance_score": imp
+                        })
+                        current_code_idx += 1
 
         # If no explicit chapter headers matched, split into logical conceptual blocks
         if len(extracted_topics) < 3:
@@ -192,14 +196,17 @@ Lưu ý:
             for idx, ch in enumerate(chunks, 1):
                 first_sentence = ch.split(".")[0].strip()
                 title = first_sentence[:60] if len(first_sentence) > 10 else f"Chủ đề trọng tâm {idx}"
-                extracted_topics.append({
-                    "code": f"CH{idx}",
-                    "title": title,
-                    "description": ch[:140] + "...",
-                    "difficulty": "Trung bình" if idx % 2 == 0 else ("Dễ" if idx == 1 else "Khó"),
-                    "estimated_hours": 2.0,
-                    "importance_score": 8.0
-                })
+                norm_title = re.sub(r"\s+", " ", title.lower())
+                if not any(re.sub(r"\s+", " ", t["title"].lower()) == norm_title for t in extracted_topics):
+                    extracted_topics.append({
+                        "code": f"CH{current_code_idx}",
+                        "title": title,
+                        "description": ch[:140] + "...",
+                        "difficulty": "Trung bình" if idx % 2 == 0 else ("Dễ" if idx == 1 else "Khó"),
+                        "estimated_hours": 2.0,
+                        "importance_score": 8.0
+                    })
+                    current_code_idx += 1
 
         return {
             "subject_name": subject_name,

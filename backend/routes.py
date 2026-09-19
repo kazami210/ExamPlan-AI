@@ -210,12 +210,69 @@ def assign_plan_task_scopes(plan_id: int, db: Session):
     """
     Computes and persists scoped slide ranges (start_page, end_page, slide_scope, image_urls)
     for all tasks in a plan.
+    Prioritizes real extracted slides/pages from the uploaded document (PDF/PPTX) over mock SVGs.
     """
     import re
+    plan = db.query(StudyPlan).filter(StudyPlan.id == plan_id).first()
     tasks = db.query(StudyTask).filter(StudyTask.plan_id == plan_id).order_by(StudyTask.study_date, StudyTask.order_index).all()
     if not tasks:
         return
 
+    doc = db.query(Document).filter(Document.id == plan.document_id).first() if plan else None
+    doc_slides = []
+    if doc and doc.document_images:
+        try:
+            parsed = json.loads(doc.document_images)
+            if isinstance(parsed, list) and len(parsed) > 0:
+                doc_slides = parsed
+        except Exception:
+            pass
+
+    # If the document has real extracted slides/pages (e.g. authentic PDF pages)
+    if doc_slides:
+        def get_ch_key_real(t):
+            full_text = f"{t.title} {t.topic_title or ''}".lower()
+            m = re.search(r"(?:chương|chuong|ch|bài|bai)\s*(\d+)", full_text)
+            return f"ch_{m.group(1)}" if m else (t.topic_title or "general")
+
+        groups = {}
+        for t in tasks:
+            groups.setdefault(get_ch_key_real(t), []).append(t)
+
+        # If document covers a single chapter or all tasks belong to this document
+        if len(groups) == 1 or len(doc_slides) > 0:
+            # If all tasks are in 1 group (like Chapter 5 PDF), partition all real slides across these tasks
+            if len(groups) == 1:
+                group_tasks = list(groups.values())[0]
+                task_dicts = [{"task_type": t.task_type, "title": t.title, "topic_title": t.topic_title} for t in group_tasks]
+                partition_chapter_slides_for_tasks(task_dicts, doc_slides)
+                for t_orm, t_dict in zip(group_tasks, task_dicts):
+                    t_orm.start_page = t_dict.get("start_page")
+                    t_orm.end_page = t_dict.get("end_page")
+                    t_orm.slide_scope = t_dict.get("slide_scope")
+                    t_orm.image_urls = json.dumps(t_dict.get("image_urls", []), ensure_ascii=False) if t_dict.get("image_urls") else None
+            else:
+                # Multiple chapters: distribute doc_slides proportionally across chapters or use chapter matching
+                total_chapters = len(groups)
+                slides_per_chapter = max(1, len(doc_slides) // total_chapters)
+                for ch_idx, (key, task_group) in enumerate(groups.items()):
+                    ch_start = ch_idx * slides_per_chapter
+                    ch_end = len(doc_slides) if ch_idx == total_chapters - 1 else min(len(doc_slides), (ch_idx + 1) * slides_per_chapter)
+                    ch_slides = doc_slides[ch_start:ch_end]
+                    task_dicts = [{"task_type": t.task_type, "title": t.title, "topic_title": t.topic_title} for t in task_group]
+                    partition_chapter_slides_for_tasks(task_dicts, ch_slides)
+                    for t_orm, t_dict in zip(task_group, task_dicts):
+                        t_orm.start_page = t_dict.get("start_page")
+                        t_orm.end_page = t_dict.get("end_page")
+                        t_orm.slide_scope = t_dict.get("slide_scope")
+                        t_orm.image_urls = json.dumps(t_dict.get("image_urls", []), ensure_ascii=False) if t_dict.get("image_urls") else None
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+        return
+
+    # Fallback to matching static slides (e.g. for sample syllabi or mock SVGs)
     def get_ch_key(t):
         full_text = f"{t.title} {t.topic_title or ''}".lower()
         m = re.search(r"(?:chương|chuong|ch|bài|bai)\s*(\d+)", full_text)
@@ -482,7 +539,8 @@ async def upload_document(
     user = get_current_user(authorization, db)
     try:
         content = await file.read()
-        file_type, extracted_text = extract_document_content(file.filename, content)
+        doc_prefix = f"doc_{int(datetime.utcnow().timestamp())}"
+        file_type, extracted_text, slide_imgs, total_pages = extract_document_content(file.filename, content, doc_prefix=doc_prefix)
         
         if not extracted_text.strip():
             raise HTTPException(status_code=400, detail="Không thể trích xuất nội dung văn bản từ tệp này.")
@@ -505,7 +563,9 @@ async def upload_document(
             file_path=str(save_path),
             extracted_text=extracted_text,
             summary=analysis.get("summary", ""),
-            subject_name=analysis.get("subject_name", file.filename)
+            subject_name=analysis.get("subject_name", file.filename),
+            total_pages=total_pages,
+            document_images=json.dumps(slide_imgs, ensure_ascii=False) if slide_imgs else None
         )
         db.add(doc)
         db.commit()

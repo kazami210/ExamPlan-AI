@@ -57,11 +57,30 @@ def serve_index():
         )
     return {"message": "ExamPlan AI Backend is running. Frontend not found."}
 
+# Explicit route for /static/slides/{filename} to serve both frontend slides and uploaded extracted slides
+upload_slides_dir = UPLOAD_DIR / "slides"
+upload_slides_dir.mkdir(parents=True, exist_ok=True)
+frontend_slides_dir = FRONTEND_DIR / "slides"
+
+@app.get("/static/slides/{filename}")
+def serve_slide(filename: str):
+    # Check UPLOAD_DIR / slides first (real extracted slides)
+    up_file = upload_slides_dir / filename
+    if up_file.exists():
+        return FileResponse(str(up_file))
+    # Check frontend / slides (static mock svgs)
+    fe_file = frontend_slides_dir / filename
+    if fe_file.exists():
+        return FileResponse(str(fe_file))
+    raise HTTPException(status_code=404, detail="Slide không tồn tại.")
+
 if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
+# Mount /uploads for user uploaded files and slides
 if UPLOAD_DIR.exists():
     app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
+    app.mount("/uploads/slides", StaticFiles(directory=str(upload_slides_dir)), name="upload_slides")
 
 if __name__ == "__main__":
     import uvicorn

@@ -36,6 +36,8 @@ class Document(Base):
     extracted_text = Column(Text, nullable=False)
     summary = Column(Text, nullable=True)
     subject_name = Column(String(255), nullable=True)
+    total_pages = Column(Integer, default=0)
+    document_images = Column(Text, nullable=True) # JSON list of extracted images/slide page paths
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="documents")
@@ -126,6 +128,16 @@ def init_db():
             ]:
                 try:
                     conn.execute(text(f"ALTER TABLE study_tasks ADD COLUMN {col} {col_type};"))
+                    conn.commit()
+                except Exception:
+                    pass
+
+            for col, col_type in [
+                ("total_pages", "INTEGER DEFAULT 0"),
+                ("document_images", "TEXT")
+            ]:
+                try:
+                    conn.execute(text(f"ALTER TABLE documents ADD COLUMN {col} {col_type};"))
                     conn.commit()
                 except Exception:
                     pass
